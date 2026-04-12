@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Expo Dev Server (iOS)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start", "--", "--ios"],
+      "port": 8081
+    },
+    {
+      "name": "Expo Dev Server (Android)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start", "--", "--android"],
+      "port": 8081
+    },
+    {
+      "name": "Expo Dev Server (Web)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start", "--", "--web"],
+      "port": 19006
+    },
+    {
+      "name": "Expo Dev Server (Interactive)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
+      "port": 8081
+    }
+  ]
+}
