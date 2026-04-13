@@ -13,6 +13,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import type { CommunityApp } from "../constants/mockCommunity";
+import { UI_CONFIG } from "../constants/mockCommunity";
 import { Colors, Fonts, Radius, Spacing } from "../constants/theme";
 import { CategoryListCard } from "./CategoryListCard";
 
@@ -23,10 +24,13 @@ const SPRING = { damping: 22, stiffness: 240, mass: 0.8 };
 function PreviewList({ apps }: { apps: CommunityApp[] }) {
   return (
     <View style={styles.previewList}>
-      {apps.slice(0, 3).map((app, i) => (
+      {apps.slice(0, UI_CONFIG.discoverPreviewCount).map((app, i) => (
         <View
           key={app.id}
-          style={[styles.previewItem, i < 2 && styles.previewItemBorder]}
+          style={[
+            styles.previewItem,
+            i < UI_CONFIG.discoverPreviewCount - 1 && styles.previewItemBorder,
+          ]}
         >
           <CategoryListCard app={app} />
         </View>
@@ -37,8 +41,8 @@ function PreviewList({ apps }: { apps: CommunityApp[] }) {
 
 // ─── Main component ────────────────────────────────────────────────────────────
 interface ExpandableCategorySectionProps {
-  title: string
-  apps: CommunityApp[]
+  title: string;
+  apps: CommunityApp[];
 }
 
 export function ExpandableCategorySection({
@@ -77,10 +81,7 @@ export function ExpandableCategorySection({
   }, [navigate]);
 
   const sectionStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: scale.value },
-      { translateY: translateY.value },
-    ],
+    transform: [{ scale: scale.value }, { translateY: translateY.value }],
     shadowOpacity: shadowOpacity.value,
   }));
 
@@ -99,7 +100,12 @@ export function ExpandableCategorySection({
 
   // Count badge — shows how many apps are in the category
   const countStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(scale.value, [0.975, 1], [0.6, 1], Extrapolation.CLAMP),
+    opacity: interpolate(
+      scale.value,
+      [0.975, 1],
+      [0.6, 1],
+      Extrapolation.CLAMP,
+    ),
   }));
 
   return (

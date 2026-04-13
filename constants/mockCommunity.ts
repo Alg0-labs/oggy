@@ -1,3 +1,12 @@
+// ---------------------------------------------------------------------------
+// UI config — these values will eventually come from the backend (e.g. a
+// /config or /settings endpoint). Replace with an API call when ready.
+// ---------------------------------------------------------------------------
+export const UI_CONFIG = {
+  /** How many apps to preview per category on the Discover page. */
+  discoverPreviewCount: 3,
+}
+
 export interface CommunityAuthor {
   id: string;
   handle: string;
