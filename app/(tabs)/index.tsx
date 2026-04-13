@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppCard } from "../../components/AppCard";
-import { CategoryListCard } from "../../components/CategoryListCard";
+import { ExpandableCategorySection } from "../../components/ExpandableCategorySection";
 import { PopularCard } from "../../components/PopularCard";
 import {
   BAR_HEIGHT,
@@ -121,30 +121,11 @@ export default function GalleryScreen() {
             const items = byCategory[cat];
             if (!items.length) return null;
             return (
-              <View key={cat} style={styles.categorySection}>
-                <View style={styles.categoryHead}>
-                  <View>
-                    <Text style={styles.categoryLabel}></Text>
-                    <Text style={styles.categoryTitle}>{cat}</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.seeAllPill}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={styles.seeAllText}>See all</Text>
-                    <Ionicons
-                      name="arrow-forward"
-                      size={12}
-                      color={Colors.text}
-                    />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.categoryList}>
-                  {items.map((app) => (
-                    <CategoryListCard key={app.id} app={app} />
-                  ))}
-                </View>
-              </View>
+              <ExpandableCategorySection
+                key={cat}
+                title={cat}
+                apps={items}
+              />
             );
           })}
         </ScrollView>
@@ -312,7 +293,7 @@ const styles = StyleSheet.create({
   },
 
   popularBlock: {
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   popularScroll: {
     paddingHorizontal: Spacing.lg,
@@ -330,45 +311,6 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     textTransform: "uppercase",
   },
-  categorySection: {
-    marginBottom: Spacing.xl,
-    paddingHorizontal: Spacing.lg,
-  },
-  categoryHead: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    marginBottom: Spacing.md,
-  },
-  categoryLabel: {
-    ...Type.micro,
-    color: Colors.textMuted,
-    textTransform: "uppercase",
-    marginBottom: 4,
-  },
-  categoryTitle: {
-    ...Type.heading2,
-    color: Colors.text,
-  },
-  seeAllPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: Radius.pill,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-  },
-  seeAllText: {
-    ...Type.button,
-    fontSize: 13,
-    color: Colors.text,
-  },
-  categoryList: {
-    gap: 10,
-  },
-
   yoursHeader: {
     marginBottom: Spacing.md,
   },
