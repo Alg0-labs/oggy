@@ -1,5 +1,3 @@
-import { Platform } from 'react-native'
-
 export const Colors = {
   bg: '#ffffff',
   bgDark: '#191c1f',
@@ -59,101 +57,90 @@ export const Radius = {
   full: 9999,
 }
 
-export const Fonts = Platform.select({
-  ios: {
-    display: 'System',
-    sans: 'System',
-    mono: 'Menlo',
-  },
-  default: {
-    display: 'normal',
-    sans: 'normal',
-    mono: 'monospace',
-  },
-}) as { display: string; sans: string; mono: string }
+// Google Fonts — loaded in app/_layout.tsx.
+// Display: Space Grotesk (editorial geometric grotesque, Aeonik-like).
+// Body/UI: Inter.
+export const Fonts = {
+  displayMedium: 'SpaceGrotesk_500Medium',
+  displaySemi: 'SpaceGrotesk_600SemiBold',
+  displayBold: 'SpaceGrotesk_700Bold',
+  sansRegular: 'Inter_400Regular',
+  sansMedium: 'Inter_500Medium',
+  sansSemi: 'Inter_600SemiBold',
+  sansBold: 'Inter_700Bold',
+  mono: 'Menlo',
+}
 
 export const Type = {
   displayHero: {
-    fontFamily: Fonts.display,
+    fontFamily: Fonts.displayMedium,
     fontSize: 64,
-    fontWeight: '500' as const,
     lineHeight: 64,
     letterSpacing: -2.2,
   },
   display: {
-    fontFamily: Fonts.display,
+    fontFamily: Fonts.displayMedium,
     fontSize: 48,
-    fontWeight: '500' as const,
     lineHeight: 48,
     letterSpacing: -1.4,
   },
   heading1: {
-    fontFamily: Fonts.display,
+    fontFamily: Fonts.displayMedium,
     fontSize: 34,
-    fontWeight: '500' as const,
     lineHeight: 38,
     letterSpacing: -0.8,
   },
   heading2: {
-    fontFamily: Fonts.display,
+    fontFamily: Fonts.displayMedium,
     fontSize: 26,
-    fontWeight: '500' as const,
     lineHeight: 30,
     letterSpacing: -0.52,
   },
   heading3: {
-    fontFamily: Fonts.display,
+    fontFamily: Fonts.displayMedium,
     fontSize: 20,
-    fontWeight: '500' as const,
     lineHeight: 24,
     letterSpacing: -0.3,
   },
   bodyLarge: {
-    fontFamily: Fonts.sans,
+    fontFamily: Fonts.sansRegular,
     fontSize: 18,
-    fontWeight: '400' as const,
     lineHeight: 28,
     letterSpacing: -0.09,
   },
   body: {
-    fontFamily: Fonts.sans,
+    fontFamily: Fonts.sansRegular,
     fontSize: 16,
-    fontWeight: '400' as const,
     lineHeight: 24,
-    letterSpacing: 0.16,
+    letterSpacing: -0.08,
   },
   bodySemibold: {
-    fontFamily: Fonts.sans,
+    fontFamily: Fonts.sansSemi,
     fontSize: 16,
-    fontWeight: '600' as const,
     lineHeight: 24,
-    letterSpacing: 0.16,
+    letterSpacing: -0.08,
   },
   bodySmall: {
-    fontFamily: Fonts.sans,
+    fontFamily: Fonts.sansRegular,
     fontSize: 14,
-    fontWeight: '400' as const,
     lineHeight: 20,
-    letterSpacing: 0.16,
+    letterSpacing: -0.05,
   },
   label: {
-    fontFamily: Fonts.display,
+    fontFamily: Fonts.sansMedium,
     fontSize: 15,
-    fontWeight: '500' as const,
     lineHeight: 20,
     letterSpacing: 0,
   },
   button: {
-    fontFamily: Fonts.display,
+    fontFamily: Fonts.sansMedium,
     fontSize: 16,
-    fontWeight: '500' as const,
     lineHeight: 20,
-    letterSpacing: 0,
+    letterSpacing: -0.1,
   },
   micro: {
-    fontFamily: Fonts.sans,
+    fontFamily: Fonts.sansBold,
     fontSize: 11,
-    fontWeight: '700' as const,
     lineHeight: 14,
     letterSpacing: 1.2,
   },
