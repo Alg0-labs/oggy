@@ -20,9 +20,15 @@ import { PromptInput } from '../components/PromptInput'
 import { GeneratingOverlay } from '../components/GeneratingOverlay'
 import { DynamicJSXExecutor } from '../components/DynamicJSXExecutor'
 import { ErrorBoundary } from '../components/ErrorBoundary'
-import { Colors, Spacing, Radius } from '../constants/theme'
+import { Colors, Spacing, Radius, Type } from '../constants/theme'
 
 type Phase = 'prompt' | 'preview'
+
+const SUGGESTIONS = [
+  'A tip calculator with a slider for percentage',
+  'A pomodoro timer with start, pause and reset',
+  'A simple habit tracker with daily checkmarks',
+]
 
 export default function CreateScreen() {
   const router = useRouter()
@@ -35,7 +41,6 @@ export default function CreateScreen() {
 
   const [prompt, setPrompt] = useState('')
   const [phase, setPhase] = useState<Phase>('prompt')
-  const [saveName, setSaveName] = useState('')
 
   const isGenerating = status === 'generating'
 
@@ -87,15 +92,27 @@ export default function CreateScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerBtn} onPress={handleBack} activeOpacity={0.7}>
-          <Ionicons name="close" size={20} color={Colors.text} />
+        <TouchableOpacity
+          style={styles.headerBtn}
+          onPress={handleBack}
+          activeOpacity={0.85}
+        >
+          <Ionicons
+            name={phase === 'preview' ? 'chevron-back' : 'close'}
+            size={20}
+            color={Colors.text}
+          />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
           {phase === 'prompt' ? 'Create' : 'Preview'}
         </Text>
         {phase === 'preview' && status === 'success' ? (
-          <TouchableOpacity style={styles.saveHeaderBtn} onPress={handleSave} activeOpacity={0.7}>
-            <Text style={styles.saveHeaderText}>Save</Text>
+          <TouchableOpacity
+            style={styles.savePill}
+            onPress={handleSave}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.savePillText}>Save</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.headerBtn} />
@@ -114,22 +131,43 @@ export default function CreateScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
+            <Text style={styles.eyebrow}>Step 01</Text>
+            <Text style={styles.headline}>
+              What do you{'\n'}want to build?
+            </Text>
+            <Text style={styles.lede}>
+              Describe your app in plain English. Be specific about features, layout and interactions.
+            </Text>
+
+            {/* Prompt input */}
+            <PromptInput
+              ref={inputRef}
+              placeholder="A tip calculator with a slider for percentage..."
+              value={prompt}
+              onChangeText={setPrompt}
+            />
+
+            {/* Suggestions */}
+            <Text style={styles.sectionLabel}>Try one</Text>
+            <View style={styles.suggestionList}>
+              {SUGGESTIONS.map((s) => (
+                <TouchableOpacity
+                  key={s}
+                  style={styles.suggestion}
+                  onPress={() => setPrompt(s)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.suggestionText}>{s}</Text>
+                  <Ionicons name="arrow-forward" size={14} color={Colors.text} />
+                </TouchableOpacity>
+              ))}
+            </View>
+
             {/* Provider selector */}
             <Text style={styles.sectionLabel}>Provider</Text>
             <ProviderPill
               selected={settings.selectedProvider}
               onChange={(p) => setSetting('selectedProvider', p)}
-            />
-
-            {/* Prompt input */}
-            <Text style={[styles.sectionLabel, { marginTop: Spacing.xl }]}>
-              What do you want to build?
-            </Text>
-            <PromptInput
-              ref={inputRef}
-              placeholder="Describe your app... e.g. A tip calculator with a slider for tip percentage"
-              value={prompt}
-              onChangeText={setPrompt}
             />
 
             {/* Generate button */}
@@ -142,26 +180,27 @@ export default function CreateScreen() {
               disabled={!prompt.trim() || isGenerating}
               activeOpacity={0.85}
             >
-              <Ionicons name="sparkles" size={18} color="#FFF" />
-              <Text style={styles.generateText}>Generate App</Text>
+              <Text style={styles.generateText}>Generate app</Text>
+              <Ionicons name="sparkles" size={18} color={Colors.textInverse} />
             </TouchableOpacity>
-
-            {/* Hint */}
-            <Text style={styles.hint}>
-              Be specific about features, layout, and interactions for best results.
-            </Text>
           </ScrollView>
         </KeyboardAvoidingView>
       ) : (
         <View style={styles.flex}>
           {status === 'error' && (
             <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle" size={40} color={Colors.error} />
-              <Text style={styles.errorTitle}>Generation Failed</Text>
+              <View style={styles.errorBadge}>
+                <Ionicons name="alert-circle" size={28} color={Colors.danger} />
+              </View>
+              <Text style={styles.errorTitle}>Generation failed</Text>
               <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity style={styles.retryBtn} onPress={handleRetry}>
-                <Ionicons name="refresh" size={16} color={Colors.primary} />
-                <Text style={styles.retryText}>Try Again</Text>
+              <TouchableOpacity
+                style={styles.retryBtn}
+                onPress={handleRetry}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="refresh" size={16} color={Colors.textInverse} />
+                <Text style={styles.retryText}>Try again</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -198,46 +237,76 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
   headerBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.surfaceElevated,
+    width: 44,
+    height: 44,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   headerTitle: {
-    fontSize: 17,
-    fontWeight: '700',
+    ...Type.button,
     color: Colors.text,
   },
-  saveHeaderBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: Radius.full,
+  savePill: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: Radius.pill,
     backgroundColor: Colors.primary,
   },
-  saveHeaderText: {
+  savePillText: {
+    ...Type.button,
     fontSize: 14,
-    fontWeight: '700',
-    color: '#FFF',
+    color: Colors.textInverse,
   },
   promptContent: {
     padding: Spacing.lg,
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
+  eyebrow: {
+    ...Type.micro,
     color: Colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 1,
     marginBottom: Spacing.sm,
+  },
+  headline: {
+    ...Type.heading1,
+    color: Colors.text,
+    marginBottom: Spacing.md,
+  },
+  lede: {
+    ...Type.body,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.xl,
+    maxWidth: 340,
+  },
+  sectionLabel: {
+    ...Type.micro,
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    marginTop: Spacing.xl,
+    marginBottom: Spacing.md,
+  },
+  suggestionList: {
+    gap: Spacing.sm,
+  },
+  suggestion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.md,
+    backgroundColor: Colors.surfaceMuted,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 14,
+    borderRadius: Radius.pill,
+  },
+  suggestionText: {
+    ...Type.bodySemibold,
+    color: Colors.text,
+    flex: 1,
+    fontSize: 14,
   },
   generateBtn: {
     flexDirection: 'row',
@@ -245,38 +314,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.sm,
     backgroundColor: Colors.primary,
-    borderRadius: Radius.md,
-    paddingVertical: 16,
-    marginTop: Spacing.xl,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    borderRadius: Radius.pill,
+    paddingVertical: 18,
+    marginTop: Spacing.xxl,
   },
   generateBtnDisabled: {
-    opacity: 0.4,
-    shadowOpacity: 0,
+    opacity: 0.35,
   },
   generateText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFF',
-  },
-  hint: {
-    fontSize: 13,
-    color: Colors.textMuted,
-    textAlign: 'center',
-    marginTop: Spacing.md,
-    lineHeight: 18,
+    ...Type.button,
+    color: Colors.textInverse,
   },
   previewContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.bg,
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,
     overflow: 'hidden',
     margin: Spacing.sm,
     marginBottom: 0,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   errorContainer: {
     flex: 1,
@@ -284,33 +342,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: Spacing.xl,
   },
+  errorBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.dangerBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.lg,
+  },
   errorTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    ...Type.heading2,
     color: Colors.text,
-    marginTop: Spacing.md,
     marginBottom: Spacing.sm,
   },
   errorText: {
-    fontSize: 14,
+    ...Type.body,
     color: Colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   retryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: Colors.primary,
+    gap: Spacing.sm,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.primary,
   },
   retryText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.primary,
+    ...Type.button,
+    color: Colors.textInverse,
   },
 })

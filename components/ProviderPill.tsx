@@ -1,14 +1,14 @@
 import React from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { Colors, Radius, Spacing } from '../constants/theme'
+import { Colors, Radius, Spacing, Type } from '../constants/theme'
 
 type Provider = 'openai' | 'google' | 'anthropic'
 
-const providers: { key: Provider; label: string; icon: string; color: string }[] = [
-  { key: 'openai', label: 'OpenAI', icon: 'flash', color: Colors.providers.openai },
-  { key: 'google', label: 'Gemini', icon: 'sparkles', color: Colors.providers.google },
-  { key: 'anthropic', label: 'Claude', icon: 'diamond', color: Colors.providers.anthropic },
+const providers: { key: Provider; label: string; icon: string }[] = [
+  { key: 'openai', label: 'OpenAI', icon: 'flash' },
+  { key: 'google', label: 'Gemini', icon: 'sparkles' },
+  { key: 'anthropic', label: 'Claude', icon: 'diamond' },
 ]
 
 interface ProviderPillProps {
@@ -26,20 +26,20 @@ export function ProviderPill({ selected, onChange }: ProviderPillProps) {
             key={p.key}
             style={[
               styles.pill,
-              active && { backgroundColor: p.color + '20', borderColor: p.color + '60' },
+              active ? styles.pillActive : styles.pillInactive,
             ]}
             onPress={() => onChange(p.key)}
-            activeOpacity={0.7}
+            activeOpacity={0.85}
           >
             <Ionicons
               name={p.icon as any}
               size={14}
-              color={active ? p.color : Colors.textMuted}
+              color={active ? Colors.textInverse : Colors.text}
             />
             <Text
               style={[
                 styles.label,
-                active && { color: p.color },
+                { color: active ? Colors.textInverse : Colors.text },
               ]}
             >
               {p.label}
@@ -55,21 +55,27 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     gap: Spacing.sm,
+    flexWrap: 'wrap',
   },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surfaceElevated,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: Radius.pill,
+    borderWidth: 2,
+  },
+  pillActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  pillInactive: {
+    backgroundColor: 'transparent',
+    borderColor: Colors.primary,
   },
   label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textMuted,
+    ...Type.button,
+    fontSize: 14,
   },
 })
