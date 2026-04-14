@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppCard } from '../../components/AppCard'
 import { ProfileAvatarButton } from '../../components/ProfileAvatarButton'
+import { PillButton } from '../../components/ui'
 import { useAppStore } from '../../store/appStore'
 import { APP_CATEGORIES } from '../../constants/categories'
 import { SEARCH_SUGGESTIONS } from '../../constants/searchSuggestions'
@@ -101,19 +102,15 @@ export default function SearchScreen() {
                   <View key={rowIdx} style={styles.categoryRow}>
                     {APP_CATEGORIES.filter((_, i) => i % 2 === rowIdx).map(
                       (category) => (
-                        <TouchableOpacity
+                        <PillButton
                           key={category.id}
-                          style={styles.categoryCard}
-                          activeOpacity={0.85}
-                          onPress={() => setQuery(category.label)}
-                        >
-                          <Text style={styles.categoryEmoji}>
-                            {category.emoji}
-                          </Text>
-                          <Text style={styles.categoryLabel}>
-                            {category.label}
-                          </Text>
-                        </TouchableOpacity>
+                          label={`${category.emoji}  ${category.label}`}
+                          variant="outline"
+                          size="sm"
+                          onPress={() =>
+                            router.push(`/category/${encodeURIComponent(category.label)}`)
+                          }
+                        />
                       ),
                     )}
                   </View>
@@ -205,27 +202,6 @@ const styles = StyleSheet.create({
   categoryRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
-  },
-  categoryCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: Radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
-  },
-  categoryEmoji: {
-    fontSize: 18,
-    lineHeight: 22,
-  },
-  categoryLabel: {
-    ...Type.bodySmall,
-    fontSize: 13,
-    color: Colors.textMuted,
-    letterSpacing: -0.1,
   },
   suggestionList: {
     paddingHorizontal: Spacing.lg,

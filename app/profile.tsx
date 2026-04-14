@@ -10,8 +10,9 @@ import {
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppCard } from '../components/AppCard'
+import { IconButton, ScreenHeader, PillButton } from '../components/ui'
 import { mockProfile } from '../constants/mockProfile'
-import { Colors, Radius, Spacing, Type } from '../constants/theme'
+import { Colors, Radius, Spacing, Type, ACTIVE_OPACITY } from '../constants/theme'
 import { useAppStore } from '../store/appStore'
 
 type AppsFilter = 'public' | 'private'
@@ -42,37 +43,15 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Top bar */}
-      <View style={styles.topBar}>
-        <TouchableOpacity
-          style={styles.iconBtn}
-          onPress={() => router.back()}
-          activeOpacity={0.85}
-          hitSlop={8}
-        >
-          <Ionicons name="chevron-back" size={22} color={Colors.text} />
-        </TouchableOpacity>
-        <View style={styles.topBarRight}>
-          <TouchableOpacity
-            style={styles.iconBtn}
-            onPress={() => {
-              // TODO: hook up share sheet with backend-provided profile URL
-            }}
-            activeOpacity={0.85}
-            hitSlop={8}
-          >
-            <Ionicons name="share-outline" size={20} color={Colors.text} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.iconBtn}
-            onPress={() => router.push('/settings')}
-            activeOpacity={0.85}
-            hitSlop={8}
-          >
-            <Ionicons name="settings-outline" size={20} color={Colors.text} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ScreenHeader
+        left={<IconButton icon="chevron-back" onPress={() => router.back()} />}
+        right={
+          <>
+            <IconButton icon="share-outline" onPress={() => {}} />
+            <IconButton icon="settings-outline" onPress={() => router.push('/settings')} />
+          </>
+        }
+      />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -137,34 +116,17 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.filterRow}>
-          {(['public', 'private'] as const).map((key) => {
-            const active = filter === key
-            return (
-              <TouchableOpacity
-                key={key}
-                style={[
-                  styles.filterPill,
-                  active ? styles.filterPillActive : styles.filterPillInactive,
-                ]}
-                onPress={() => setFilter(key)}
-                activeOpacity={0.85}
-              >
-                <Ionicons
-                  name={key === 'public' ? 'globe-outline' : 'lock-closed-outline'}
-                  size={14}
-                  color={active ? Colors.textInverse : Colors.text}
-                />
-                <Text
-                  style={[
-                    styles.filterPillText,
-                    { color: active ? Colors.textInverse : Colors.text },
-                  ]}
-                >
-                  {key === 'public' ? 'Public' : 'Private'}
-                </Text>
-              </TouchableOpacity>
-            )
-          })}
+          {(['public', 'private'] as const).map((key) => (
+            <PillButton
+              key={key}
+              label={key === 'public' ? 'Public' : 'Private'}
+              icon={key === 'public' ? 'globe-outline' : 'lock-closed-outline'}
+              variant="outline"
+              size="sm"
+              active={filter === key}
+              onPress={() => setFilter(key)}
+            />
+          ))}
         </View>
 
         {visibleApps.length === 0 ? (
@@ -206,26 +168,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.bg,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-  },
-  topBarRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.pill,
-    backgroundColor: Colors.surfaceMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   scroll: {
     paddingHorizontal: Spacing.lg,
@@ -324,27 +266,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.sm,
     marginBottom: Spacing.md,
-  },
-  filterPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: Radius.pill,
-    borderWidth: 2,
-  },
-  filterPillActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  filterPillInactive: {
-    backgroundColor: 'transparent',
-    borderColor: Colors.border,
-  },
-  filterPillText: {
-    ...Type.button,
-    fontSize: 14,
   },
   grid: {
     flexDirection: 'row',

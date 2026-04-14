@@ -3,15 +3,23 @@ import { useRouter } from 'expo-router'
 import React, { useCallback, useEffect, useState } from 'react'
 import {
   Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Colors, Radius, Spacing, Type } from '../constants/theme'
+import { BrandLogo, type BrandKey } from '../components/BrandLogo'
+import { GlassCard } from '../components/GlassCard'
+import { IconButton, ScreenHeader, PillButton } from '../components/ui'
+import { Colors, Radius, Spacing, Type, ACTIVE_OPACITY } from '../constants/theme'
 import { createLLMService } from '../services/llm/factory'
 import { keychainManager } from '../services/storage/keychain'
 import { useAppStore } from '../store/appStore'
@@ -20,24 +28,37 @@ type Provider = 'openai' | 'google' | 'anthropic'
 
 interface ProviderEntry {
   key: Provider
+  brand: BrandKey
   label: string
-  icon: keyof typeof Ionicons.glyphMap
-  color: string
   placeholder: string
 }
 
 // TODO: provider catalog may move behind a remote config flag. Keep shape stable.
 const PROVIDERS: ProviderEntry[] = [
-  { key: 'openai', label: 'OpenAI', icon: 'flash', color: Colors.providers.openai, placeholder: 'sk-...' },
-  { key: 'google', label: 'Google Gemini', icon: 'sparkles', color: Colors.providers.google, placeholder: 'AIza...' },
-  { key: 'anthropic', label: 'Anthropic Claude', icon: 'diamond', color: Colors.providers.anthropic, placeholder: 'sk-ant-...' },
+  { key: 'openai', brand: 'openai', label: 'OpenAI', placeholder: 'sk-...' },
+  { key: 'google', brand: 'gemini', label: 'Gemini', placeholder: 'AIza...' },
+  { key: 'anthropic', brand: 'anthropic', label: 'Claude', placeholder: 'sk-ant-...' },
+]
+
+interface IntegrationEntry {
+  id: string
+  brand: BrandKey
+  label: string
+  description: string
+}
+
+// TODO: integration list + connection state will come from backend
+const INTEGRATIONS: IntegrationEntry[] = [
+  { id: 'github', brand: 'github', label: 'GitHub', description: 'Sync repos and commits' },
+  { id: 'gmail', brand: 'gmail', label: 'Gmail', description: 'Read and draft email' },
+  { id: 'gcal', brand: 'googleCalendar', label: 'Google Calendar', description: 'View and create events' },
+  { id: 'x', brand: 'x', label: 'X', description: 'Cross-post from your apps' },
 ]
 
 interface LegalLink {
   id: string
   label: string
-  // TODO: swap for real URLs / in-app routes served from backend
-  href: string
+  href: string // TODO: swap for real URLs served from backend
 }
 
 const LEGAL_LINKS: LegalLink[] = [
@@ -52,66 +73,90 @@ export default function SettingsScreen() {
   const settings = useAppStore((s) => s.settings)
   const setSetting = useAppStore((s) => s.setSetting)
 
-  const [keys, setKeys] = useState<Record<Provider, string>>({
-    openai: '',
-    google: '',
-    anthropic: '',
-  })
-  const [hasKey, setHasKey] = useState<Record<Provider, boolean>>({
+  const [keyDraft, setKeyDraft] = useState('')
+  const [keyStatus, setKeyStatus] = useState<Record<Provider, boolean>>({
     openai: false,
     google: false,
     anthropic: false,
   })
-  const [editing, setEditing] = useState<Provider | null>(null)
-  const [testing, setTesting] = useState<Provider | null>(null)
+  const [activeProvider, setActiveProvider] = useState<ProviderEntry | null>(null)
+  const [testing, setTesting] = useState(false)
+  const [saving, setSaving] = useState(false)
+  // TODO: replace local toggle state with backend-connected integrations
+  const [integrations, setIntegrations] = useState<Record<string, boolean>>({
+    github: false,
+    gmail: false,
+    gcal: false,
+    x: false,
+  })
 
   useEffect(() => {
     ;(async () => {
-      const next: Record<Provider, boolean> = { openai: false, google: false, anthropic: false }
+      const statuses: Record<string, boolean> = {}
       for (const p of PROVIDERS) {
-        const key = await keychainManager.retrieveAPIKey(p.key)
-        next[p.key] = !!key
+        const existing = await keychainManager.retrieveAPIKey(p.key)
+        statuses[p.key] = !!existing
       }
-      setHasKey(next)
+      setKeyStatus(statuses as Record<Provider, boolean>)
     })()
   }, [])
 
-  const saveKey = useCallback(
-    async (provider: Provider) => {
-      const key = keys[provider].trim()
-      if (!key) {
-        await keychainManager.deleteAPIKey(provider)
-        setHasKey((prev) => ({ ...prev, [provider]: false }))
-      } else {
-        await keychainManager.storeAPIKey(provider, key)
-        setHasKey((prev) => ({ ...prev, [provider]: true }))
-      }
-      setKeys((prev) => ({ ...prev, [provider]: '' }))
-      setEditing(null)
-    },
-    [keys],
-  )
+  const openKeyModal = useCallback((provider: ProviderEntry) => {
+    setKeyDraft('')
+    setActiveProvider(provider)
+  }, [])
 
-  const testKey = useCallback(async (provider: Provider) => {
-    setTesting(provider)
+  const closeKeyModal = useCallback(() => {
+    setActiveProvider(null)
+    setKeyDraft('')
+  }, [])
+
+  const saveKey = useCallback(async () => {
+    if (!activeProvider) return
+    const key = keyDraft.trim()
+    setSaving(true)
     try {
-      const apiKey = await keychainManager.retrieveAPIKey(provider)
+      if (!key) {
+        await keychainManager.deleteAPIKey(activeProvider.key)
+        setKeyStatus((prev) => ({ ...prev, [activeProvider.key]: false }))
+      } else {
+        await keychainManager.storeAPIKey(activeProvider.key, key)
+        setKeyStatus((prev) => ({ ...prev, [activeProvider.key]: true }))
+      }
+      closeKeyModal()
+    } finally {
+      setSaving(false)
+    }
+  }, [keyDraft, activeProvider, closeKeyModal])
+
+  const removeKey = useCallback(async () => {
+    if (!activeProvider) return
+    await keychainManager.deleteAPIKey(activeProvider.key)
+    setKeyStatus((prev) => ({ ...prev, [activeProvider.key]: false }))
+    closeKeyModal()
+  }, [activeProvider, closeKeyModal])
+
+  const testKey = useCallback(async () => {
+    if (!activeProvider) return
+    setTesting(true)
+    try {
+      const apiKey = await keychainManager.retrieveAPIKey(activeProvider.key)
       if (!apiKey) {
         Alert.alert('No key', 'Save an API key first.')
         return
       }
-      const llm = createLLMService(provider, apiKey)
+      const llm = createLLMService(activeProvider.key, apiKey)
       const ok = await llm.testConnection?.()
-      Alert.alert(
-        ok ? 'Connected' : 'Failed',
-        ok ? `${provider} is working.` : 'Could not connect. Check your key.',
-      )
+      Alert.alert(ok ? 'Connected' : 'Failed')
     } catch {
       Alert.alert('Error', 'Connection test failed.')
     } finally {
-      setTesting(null)
+      setTesting(false)
     }
-  }, [])
+  }, [activeProvider])
+
+  const onComingSoon = (label: string) =>
+    Alert.alert(label, 'This will be available soon.')
 
   const onDeleteAccount = () => {
     Alert.alert(
@@ -123,7 +168,8 @@ export default function SettingsScreen() {
           text: 'Delete',
           style: 'destructive',
           // TODO: wire up backend account deletion
-          onPress: () => Alert.alert('Not implemented', 'Account deletion is not yet wired up.'),
+          onPress: () =>
+            Alert.alert('Not implemented', 'Account deletion is not yet wired up.'),
         },
       ],
     )
@@ -131,171 +177,161 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.topBar}>
-        <TouchableOpacity
-          style={styles.iconBtn}
-          onPress={() => router.back()}
-          activeOpacity={0.85}
-          hitSlop={8}
-        >
-          <Ionicons name="chevron-back" size={22} color={Colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.topTitle}>Settings</Text>
-        <View style={styles.iconBtnPlaceholder} />
-      </View>
+      <ScreenHeader
+        title="Settings"
+        left={<IconButton icon="chevron-back" onPress={() => router.back()} />}
+      />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
         {/* Account */}
-        <Text style={[styles.sectionLabel, styles.sectionLabelFirst]}>Account</Text>
-        <View style={styles.list}>
+        <Text style={[styles.sectionLabel, styles.sectionLabelFirst]}>
+          Account
+        </Text>
+        <GlassCard>
           <PrefRow
             icon="person-outline"
             title="Edit profile"
             subtitle="Name, handle, bio, avatar"
+            onPress={() => onComingSoon('Edit profile')}
           />
           <Divider />
           <PrefRow
             icon="at-outline"
             title="Connected accounts"
-            subtitle="Link GitHub, X, or Google"
+            subtitle="Sign-in providers"
+            onPress={() => onComingSoon('Connected accounts')}
           />
-        </View>
+        </GlassCard>
 
         {/* Active provider */}
         <Text style={styles.sectionLabel}>Active provider</Text>
         <View style={styles.providerRow}>
-          {PROVIDERS.map((p) => {
-            const active = settings.selectedProvider === p.key
-            return (
-              <TouchableOpacity
-                key={p.key}
-                style={[
-                  styles.providerChip,
-                  active ? styles.providerChipActive : styles.providerChipInactive,
-                ]}
-                onPress={() => setSetting('selectedProvider', p.key)}
-                activeOpacity={0.85}
-              >
-                <Ionicons
-                  name={p.icon}
-                  size={14}
-                  color={active ? Colors.textInverse : Colors.text}
-                />
-                <Text
-                  style={[
-                    styles.chipLabel,
-                    { color: active ? Colors.textInverse : Colors.text },
-                  ]}
-                >
-                  {p.label.split(' ')[0]}
-                </Text>
-              </TouchableOpacity>
-            )
-          })}
+          {PROVIDERS.map((p) => (
+            <PillButton
+              key={p.key}
+              label={p.label}
+              variant="outline"
+              size="md"
+              active={settings.selectedProvider === p.key}
+              onPress={() => setSetting('selectedProvider', p.key)}
+            />
+          ))}
         </View>
 
         {/* API keys */}
         <Text style={styles.sectionLabel}>API keys</Text>
-        {PROVIDERS.map((p) => (
-          <View key={p.key} style={styles.keyCard}>
-            <View style={styles.keyHeader}>
-              <View style={styles.keyLeft}>
-                <View style={[styles.keyDot, { backgroundColor: p.color }]}>
-                  <Ionicons name={p.icon} size={14} color={Colors.textInverse} />
-                </View>
-                <View>
-                  <Text style={styles.keyName}>{p.label}</Text>
-                  <Text
-                    style={[
-                      styles.keyStatus,
-                      { color: hasKey[p.key] ? Colors.teal : Colors.textMuted },
-                    ]}
-                  >
-                    {hasKey[p.key] ? 'Connected' : 'No key set'}
-                  </Text>
-                </View>
-              </View>
-              {hasKey[p.key] && (
+        <GlassCard>
+          {PROVIDERS.map((p, i) => {
+            const connected = keyStatus[p.key]
+            return (
+              <React.Fragment key={p.key}>
                 <TouchableOpacity
-                  style={styles.testPill}
-                  onPress={() => testKey(p.key)}
-                  disabled={testing === p.key}
+                  style={styles.keyRow}
                   activeOpacity={0.85}
+                  onPress={() => openKeyModal(p)}
                 >
-                  <Text
-                    style={[
-                      styles.testPillText,
-                      testing === p.key && { opacity: 0.5 },
-                    ]}
-                  >
-                    {testing === p.key ? 'Testing' : 'Test'}
-                  </Text>
+                  <View style={styles.keyLeft}>
+                    <BrandLogo brand={p.brand} size={36} />
+                    <View>
+                      <Text style={styles.keyName}>{p.label}</Text>
+                      <Text
+                        style={[
+                          styles.keyStatus,
+                          { color: connected ? Colors.teal : Colors.textMuted },
+                        ]}
+                      >
+                        {connected ? 'Connected' : 'No key'}
+                      </Text>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
                 </TouchableOpacity>
-              )}
-            </View>
+                {i < PROVIDERS.length - 1 && <Divider />}
+              </React.Fragment>
+            )
+          })}
+        </GlassCard>
 
-            {editing === p.key ? (
-              <View style={styles.inputRow}>
-                <TextInput
-                  style={styles.keyInput}
-                  placeholder={p.placeholder}
-                  placeholderTextColor={Colors.textMuted}
-                  value={keys[p.key]}
-                  onChangeText={(text) => setKeys((prev) => ({ ...prev, [p.key]: text }))}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoCorrect={false}
+        {/* Integrations */}
+        <Text style={styles.sectionLabel}>Integrations</Text>
+        <GlassCard>
+          {INTEGRATIONS.map((integration, i) => (
+            <React.Fragment key={integration.id}>
+              <View style={styles.integrationRow}>
+                <View style={styles.integrationLeft}>
+                  <BrandLogo brand={integration.brand} size={36} />
+                  <View style={styles.integrationCopy}>
+                    <Text style={styles.integrationLabel}>
+                      {integration.label}
+                    </Text>
+                    <Text style={styles.integrationDescription}>
+                      {integration.description}
+                    </Text>
+                  </View>
+                </View>
+                <Switch
+                  value={!!integrations[integration.id]}
+                  onValueChange={(next) =>
+                    setIntegrations((prev) => ({
+                      ...prev,
+                      [integration.id]: next,
+                    }))
+                  }
+                  trackColor={{ false: Colors.border, true: Colors.primary }}
+                  thumbColor={Colors.textInverse}
+                  ios_backgroundColor={Colors.border}
                 />
-                <TouchableOpacity style={styles.saveBtn} onPress={() => saveKey(p.key)}>
-                  <Ionicons name="checkmark" size={18} color={Colors.textInverse} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.cancelBtn}
-                  onPress={() => {
-                    setEditing(null)
-                    setKeys((prev) => ({ ...prev, [p.key]: '' }))
-                  }}
-                >
-                  <Ionicons name="close" size={18} color={Colors.text} />
-                </TouchableOpacity>
               </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.editRow}
-                onPress={() => setEditing(p.key)}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.editText}>
-                  {hasKey[p.key] ? 'Update key' : 'Add key'}
-                </Text>
-                <Ionicons name="chevron-forward" size={16} color={Colors.text} />
-              </TouchableOpacity>
-            )}
-          </View>
-        ))}
+              {i < INTEGRATIONS.length - 1 && <Divider />}
+            </React.Fragment>
+          ))}
+        </GlassCard>
 
         {/* Preferences */}
         <Text style={styles.sectionLabel}>Preferences</Text>
-        <View style={styles.list}>
-          <PrefRow icon="globe-outline" title="Default visibility" subtitle="New apps start as private" />
+        <GlassCard>
+          <PrefRow
+            icon="globe-outline"
+            title="Default visibility"
+            subtitle="New apps start as private"
+            onPress={() => onComingSoon('Default visibility')}
+          />
           <Divider />
-          <PrefRow icon="notifications-outline" title="Notifications" subtitle="Likes, remixes, followers" />
+          <PrefRow
+            icon="notifications-outline"
+            title="Notifications"
+            subtitle="Likes, remixes, followers"
+            onPress={() => onComingSoon('Notifications')}
+          />
           <Divider />
-          <PrefRow icon="shield-checkmark-outline" title="Privacy & data" subtitle="Control what's shared publicly" />
-        </View>
+          <PrefRow
+            icon="shield-checkmark-outline"
+            title="Privacy & data"
+            subtitle="Control what's shared publicly"
+            onPress={() => onComingSoon('Privacy & data')}
+          />
+        </GlassCard>
 
         {/* Legal */}
         <Text style={styles.sectionLabel}>Legal</Text>
-        <View style={styles.list}>
+        <GlassCard>
           {LEGAL_LINKS.map((link, i) => (
             <React.Fragment key={link.id}>
-              <TouchableOpacity style={styles.prefRow} activeOpacity={0.85}>
+              <TouchableOpacity
+                style={styles.prefRow}
+                activeOpacity={0.85}
+                onPress={() => onComingSoon(link.label)}
+              >
                 <View style={styles.prefLeft}>
                   <View style={styles.prefIcon}>
-                    <Ionicons name="document-text-outline" size={16} color={Colors.text} />
+                    <Ionicons
+                      name="document-text-outline"
+                      size={16}
+                      color={Colors.text}
+                    />
                   </View>
                   <Text style={styles.prefTitle}>{link.label}</Text>
                 </View>
@@ -304,31 +340,98 @@ export default function SettingsScreen() {
               {i < LEGAL_LINKS.length - 1 && <Divider />}
             </React.Fragment>
           ))}
-        </View>
+        </GlassCard>
 
         {/* Danger zone */}
-        <Text style={[styles.sectionLabel, styles.sectionLabelDanger]}>Danger zone</Text>
-        <TouchableOpacity
-          style={styles.deleteRow}
-          onPress={onDeleteAccount}
-          activeOpacity={0.85}
-        >
-          <View style={styles.deleteLeft}>
-            <View style={styles.deleteIcon}>
-              <Ionicons name="trash-outline" size={16} color={Colors.danger} />
+        <Text style={[styles.sectionLabel, styles.sectionLabelDanger]}>
+          Danger zone
+        </Text>
+        <GlassCard tint="danger">
+          <TouchableOpacity
+            style={styles.deleteRow}
+            onPress={onDeleteAccount}
+            activeOpacity={0.85}
+          >
+            <View style={styles.deleteLeft}>
+              <View style={styles.deleteIcon}>
+                <Ionicons name="trash-outline" size={16} color={Colors.danger} />
+              </View>
+              <View>
+                <Text style={styles.deleteTitle}>Delete account</Text>
+                <Text style={styles.deleteSubtitle}>
+                  Permanently remove your account and apps
+                </Text>
+              </View>
             </View>
-            <View>
-              <Text style={styles.deleteTitle}>Delete account</Text>
-              <Text style={styles.deleteSubtitle}>
-                Permanently remove your account and apps
-              </Text>
-            </View>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color={Colors.danger} />
-        </TouchableOpacity>
+            <Ionicons name="chevron-forward" size={16} color={Colors.danger} />
+          </TouchableOpacity>
+        </GlassCard>
 
         <Text style={styles.version}>Oggy · v0.1.0</Text>
       </ScrollView>
+
+      <Modal
+        visible={!!activeProvider}
+        transparent
+        animationType="fade"
+        onRequestClose={closeKeyModal}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={closeKeyModal}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
+            style={styles.modalCentered}
+          >
+            <Pressable style={styles.modalCard} onPress={() => {}}>
+              {activeProvider && (
+                <>
+                  <View style={styles.modalHeader}>
+                    <BrandLogo brand={activeProvider.brand} size={40} />
+                    <Text style={styles.modalTitle}>{activeProvider.label}</Text>
+                  </View>
+
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder={activeProvider.placeholder}
+                    placeholderTextColor={Colors.textMuted}
+                    value={keyDraft}
+                    onChangeText={setKeyDraft}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoFocus
+                  />
+
+                  <View style={styles.modalActions}>
+                    {keyStatus[activeProvider.key] && (
+                      <PillButton
+                        label="Remove"
+                        variant="danger"
+                        size="sm"
+                        onPress={removeKey}
+                        style={{ marginRight: 'auto' }}
+                      />
+                    )}
+                    <PillButton
+                      label={testing ? 'Testing…' : 'Test'}
+                      variant="outline"
+                      size="sm"
+                      onPress={testKey}
+                      disabled={testing || !keyStatus[activeProvider.key]}
+                    />
+                    <PillButton
+                      label={saving ? 'Saving…' : 'Save'}
+                      size="sm"
+                      onPress={saveKey}
+                      disabled={saving}
+                    />
+                  </View>
+                </>
+              )}
+            </Pressable>
+          </KeyboardAvoidingView>
+        </Pressable>
+      </Modal>
     </View>
   )
 }
@@ -337,13 +440,15 @@ function PrefRow({
   icon,
   title,
   subtitle,
+  onPress,
 }: {
   icon: keyof typeof Ionicons.glyphMap
   title: string
   subtitle: string
+  onPress?: () => void
 }) {
   return (
-    <TouchableOpacity style={styles.prefRow} activeOpacity={0.85}>
+    <TouchableOpacity style={styles.prefRow} activeOpacity={0.85} onPress={onPress}>
       <View style={styles.prefLeft}>
         <View style={styles.prefIcon}>
           <Ionicons name={icon} size={16} color={Colors.text} />
@@ -367,29 +472,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.bg,
   },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-  },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.pill,
-    backgroundColor: Colors.surfaceMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconBtnPlaceholder: {
-    width: 40,
-    height: 40,
-  },
-  topTitle: {
-    ...Type.heading3,
-    color: Colors.text,
-  },
   scroll: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
@@ -400,7 +482,7 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     textTransform: 'uppercase',
     marginTop: Spacing.xl,
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   sectionLabelFirst: {
     marginTop: 0,
@@ -413,120 +495,65 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     flexWrap: 'wrap',
   },
-  providerChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: Radius.pill,
-    borderWidth: 2,
-  },
-  providerChipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  providerChipInactive: {
-    backgroundColor: 'transparent',
-    borderColor: Colors.primary,
-  },
-  chipLabel: {
-    ...Type.button,
-    fontSize: 14,
-  },
-  keyCard: {
-    backgroundColor: Colors.surfaceMuted,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
-  keyHeader: {
+  keyRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    padding: Spacing.md,
   },
   keyLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
   },
-  keyDot: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   keyName: {
-    ...Type.heading3,
+    ...Type.bodySemibold,
     color: Colors.text,
-    fontSize: 17,
+    fontSize: 15,
   },
   keyStatus: {
     ...Type.bodySmall,
     fontSize: 12,
     marginTop: 2,
   },
-  testPill: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: Radius.pill,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-  },
-  testPillText: {
-    ...Type.button,
-    fontSize: 14,
-    color: Colors.primary,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.md,
-  },
-  keyInput: {
+  modalBackdrop: {
     flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    padding: Spacing.lg,
+  },
+  modalCentered: {
+    justifyContent: 'flex-end',
+    paddingBottom: Spacing.lg,
+  },
+  modalCard: {
     backgroundColor: Colors.bg,
-    borderRadius: Radius.pill,
+    borderRadius: Radius.xl,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  modalTitle: {
+    ...Type.bodySemibold,
+    fontSize: 15,
+    color: Colors.text,
+  },
+  modalInput: {
+    backgroundColor: Colors.surfaceMuted,
+    borderRadius: Radius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: 12,
-    ...Type.body,
+    ...Type.bodySmall,
     color: Colors.text,
   },
-  saveBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.pill,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.pill,
-    backgroundColor: Colors.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  editRow: {
+  modalActions: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: Spacing.md,
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  editText: {
-    ...Type.bodySemibold,
-    color: Colors.text,
-    fontSize: 14,
-  },
-  list: {
-    backgroundColor: Colors.surfaceMuted,
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
+    justifyContent: 'flex-end',
+    gap: Spacing.sm,
   },
   prefRow: {
     flexDirection: 'row',
@@ -538,12 +565,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
+    flex: 1,
   },
   prefIcon: {
     width: 36,
     height: 36,
     borderRadius: Radius.pill,
-    backgroundColor: Colors.bg,
+    backgroundColor: 'rgba(255,255,255,0.65)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.06)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -558,9 +588,36 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     marginTop: 2,
   },
+  integrationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Spacing.md,
+  },
+  integrationLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    flex: 1,
+  },
+  integrationCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  integrationLabel: {
+    ...Type.bodySemibold,
+    color: Colors.text,
+    fontSize: 15,
+  },
+  integrationDescription: {
+    ...Type.bodySmall,
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginTop: 2,
+  },
   divider: {
-    height: 1,
-    backgroundColor: Colors.border,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(0,0,0,0.08)',
     marginHorizontal: Spacing.md,
   },
   deleteRow: {
@@ -568,8 +625,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: Spacing.md,
-    borderRadius: Radius.lg,
-    backgroundColor: Colors.dangerBg,
   },
   deleteLeft: {
     flexDirection: 'row',
@@ -581,7 +636,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: Radius.pill,
-    backgroundColor: Colors.bg,
+    backgroundColor: 'rgba(255,255,255,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
   },

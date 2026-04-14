@@ -138,10 +138,24 @@ export const Type = {
     lineHeight: 20,
     letterSpacing: -0.1,
   },
+  buttonSmall: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 14,
+    lineHeight: 18,
+    letterSpacing: -0.05,
+  },
   micro: {
     fontFamily: Fonts.sansBold,
     fontSize: 11,
     lineHeight: 14,
     letterSpacing: 1.2,
   },
+}
+
+export const HIT_SLOP = 8
+export const ACTIVE_OPACITY = 0.85
+
+export const Springs = {
+  tab: { damping: 18, stiffness: 180, mass: 0.9 },
+  snappy: { damping: 24, stiffness: 220, mass: 0.9 },
 }

@@ -3,7 +3,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native'
 import { useRouter } from 'expo-router'
@@ -12,8 +11,9 @@ import { useSharedValue, withSpring } from 'react-native-reanimated'
 import { AppCard } from '../AppCard'
 import { GlassNavbar } from '../glass-nav/GlassNavbar'
 import type { TabConfig } from '../glass-nav/types'
+import { PillButton } from '../ui'
 import { useAppStore } from '../../store/appStore'
-import { Colors, Radius, Spacing, Type } from '../../constants/theme'
+import { Colors, Radius, Spacing, Springs, Type } from '../../constants/theme'
 
 type YoursFilter = 'all' | 'public' | 'private'
 
@@ -46,11 +46,7 @@ export function YourAppsContent() {
   const filterPosition = useSharedValue(0)
 
   useEffect(() => {
-    filterPosition.value = withSpring(filterIndex, {
-      damping: 18,
-      stiffness: 180,
-      mass: 0.9,
-    })
+    filterPosition.value = withSpring(filterIndex, Springs.tab)
   }, [filterIndex]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const filter = FILTERS[filterIndex].key
@@ -91,14 +87,11 @@ export function YourAppsContent() {
             Describe your first mini-app. It runs natively on this device — no
             webviews.
           </Text>
-          <TouchableOpacity
-            style={styles.cta}
+          <PillButton
+            label="Create new app"
+            iconRight="arrow-forward"
             onPress={() => router.push('/create')}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.ctaText}>Create new app</Text>
-            <Ionicons name="arrow-forward" size={16} color={Colors.textInverse} />
-          </TouchableOpacity>
+          />
         </View>
       ) : (
         <View style={styles.grid}>
@@ -162,19 +155,5 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     maxWidth: 320,
     marginBottom: Spacing.md,
-  },
-  cta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 22,
-    borderRadius: Radius.pill,
-  },
-  ctaText: {
-    ...Type.button,
-    fontSize: 14,
-    color: Colors.textInverse,
   },
 })

@@ -33,15 +33,11 @@ export function DiscoverContent({ topInset = 0, onScroll }: DiscoverContentProps
   )
 
   const byCategory = useMemo(() => {
-    const map: Record<AppCategory, typeof communityApps> = {
-      Productivity: [],
-      Games: [],
-      Entertainment: [],
-      Finance: [],
-      Health: [],
-      Creative: [],
+    const map: Partial<Record<AppCategory, typeof communityApps>> = {}
+    for (const a of communityApps) {
+      if (!map[a.category]) map[a.category] = []
+      map[a.category]!.push(a)
     }
-    for (const a of communityApps) map[a.category].push(a)
     return map
   }, [])
 

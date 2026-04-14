@@ -18,7 +18,7 @@ import type { TabConfig } from "../../components/glass-nav/types";
 import { DiscoverContent } from "../../components/home/DiscoverContent";
 import { FollowingContent } from "../../components/home/FollowingContent";
 import { ProfileAvatarButton } from "../../components/ProfileAvatarButton";
-import { Colors, Spacing, Type } from "../../constants/theme";
+import { Colors, Spacing, Springs, Type } from "../../constants/theme";
 
 type HomeTab = "discover" | "following";
 
@@ -50,11 +50,7 @@ export default function HomeScreen() {
   const tabPosition = useSharedValue(1);
 
   useEffect(() => {
-    tabPosition.value = withSpring(tabIndex, {
-      damping: 18,
-      stiffness: 180,
-      mass: 0.9,
-    });
+    tabPosition.value = withSpring(tabIndex, Springs.tab);
   }, [tabIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onSelectTab = useCallback((index: number) => {

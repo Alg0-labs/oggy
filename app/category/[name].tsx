@@ -1,10 +1,8 @@
-import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo } from "react";
 import {
   FlatList,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -17,8 +15,9 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CategoryListCard } from "../../components/CategoryListCard";
+import { IconButton, IconButtonSpacer } from "../../components/ui";
 import { communityApps } from "../../constants/mockCommunity";
-import { Colors, Fonts, Radius, Spacing } from "../../constants/theme";
+import { Colors, Spacing, Type } from "../../constants/theme";
 
 // Spring config — controlled, no bounce
 const SPRING = { damping: 24, stiffness: 220, mass: 0.9 };
@@ -68,20 +67,9 @@ export default function CategoryScreen() {
         <View style={styles.headerBottomBorder} />
 
         <View style={styles.headerRow}>
-          {/* Back button */}
-          <Pressable
-            onPress={() => router.back()}
-            style={styles.backBtn}
-            hitSlop={12}
-          >
-            <Ionicons name="chevron-back" size={18} color={Colors.text} />
-          </Pressable>
-
-          {/* Category title */}
+          <IconButton icon="chevron-back" size="sm" variant="glass" onPress={() => router.back()} />
           <Text style={styles.headerTitle}>{name}</Text>
-
-          {/* Right spacer keeps title centred */}
-          <View style={styles.backBtn} />
+          <IconButtonSpacer size="sm" />
         </View>
 
         {/* App count sub-label */}
@@ -175,25 +163,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 6,
   },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.pill,
-    backgroundColor: "rgba(25,28,31,0.06)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
   headerTitle: {
-    fontFamily: Fonts.displayBold,
-    fontSize: 20,
-    letterSpacing: -0.5,
+    ...Type.heading3,
     color: Colors.text,
   },
   headerSub: {
-    fontFamily: Fonts.sansMedium,
+    ...Type.bodySmall,
     fontSize: 13,
     color: Colors.textMuted,
-    letterSpacing: 0.2,
     textAlign: "center",
   },
 
