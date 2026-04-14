@@ -86,6 +86,7 @@ export function GlassBottomBar({ state, navigation, tabConfigs }: Props) {
         pageWidth={1}
         scrollX={tabPosition}
         onTabPress={onTabPress}
+        showLabels={false}
       />
 
       {/* Plus button — glass style matching the navbar */}
@@ -97,8 +98,8 @@ export function GlassBottomBar({ state, navigation, tabConfigs }: Props) {
         <View style={styles.fabShadow} />
         <View style={styles.fabClip}>
           <BlurView
-            intensity={Platform.OS === 'ios' ? 80 : 60}
-            tint="dark"
+            intensity={Platform.OS === 'ios' ? 60 : 50}
+            tint={Platform.OS === 'ios' ? 'systemUltraThinMaterialDark' : 'dark'}
             {...(Platform.OS === 'android'
               ? ({ experimentalBlurMethod: 'dimezisBlurView' } as any)
               : {})}

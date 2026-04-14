@@ -105,7 +105,6 @@ export function AnimatedIndicator({
       />
       <View style={styles.fill} />
       <Animated.View style={[styles.glow, glowStyle]} />
-      <View style={styles.highlight} />
       <View style={styles.innerBorder} />
     </Animated.View>
   );
@@ -125,15 +124,6 @@ const styles = StyleSheet.create({
   glow: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "#fff",
-  },
-  highlight: {
-    position: "absolute",
-    top: 1,
-    left: 6,
-    right: 6,
-    height: 1,
-    borderRadius: 1,
-    backgroundColor: "rgba(255,255,255,0.9)",
   },
   innerBorder: {
     ...StyleSheet.absoluteFillObject,
