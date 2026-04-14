@@ -1,12 +1,17 @@
+import { Ionicons } from '@expo/vector-icons'
+import { BlurView } from 'expo-blur'
+import { useRouter } from 'expo-router'
 import React, { useCallback, useEffect } from 'react'
-import { Dimensions, StyleSheet, View } from 'react-native'
+import { Dimensions, Platform, StyleSheet, TouchableOpacity, View } from 'react-native'
 import { useSharedValue, withSpring } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
-import { GlassNavbar } from './GlassNavbar'
+import { GlassNavbar, BAR_HEIGHT } from './GlassNavbar'
 import type { IoniconName, TabConfig } from './types'
+import { Colors } from '../../constants/theme'
 
-const BAR_INSET = 50
+const SIDE_INSET = 24
+const GAP = 12
 
 export interface BottomTabConfig {
   icon: IoniconName
@@ -18,18 +23,14 @@ interface Props extends BottomTabBarProps {
   tabConfigs: Record<string, BottomTabConfig>
 }
 
-/**
- * Drop-in Expo Router bottom tab bar that reuses GlassNavbar 1:1.
- *
- * The key trick: we pass `pageWidth={1}` to GlassNavbar and spring-animate
- * a shared value between integer tab indices (0, 1, 2…). Because
- * `progress = scrollX / pageWidth = tabPosition / 1 = tabPosition`,
- * all the indicator math and TabButton emphasis work identically to the
- * scroll-driven top navbar — no code duplication at all.
- */
 export function GlassBottomBar({ state, navigation, tabConfigs }: Props) {
   const insets = useSafeAreaInsets()
-  const barWidth = Dimensions.get('window').width - BAR_INSET * 2
+  const router = useRouter()
+  const screenWidth = Dimensions.get('window').width
+
+  // The navbar takes the remaining width after the FAB + gaps
+  const fabSize = BAR_HEIGHT
+  const barWidth = screenWidth - SIDE_INSET * 2 - fabSize - GAP
 
   const visibleRoutes = state.routes.filter((r) => tabConfigs[r.name])
   const activeVisibleIndex = Math.max(
@@ -37,7 +38,6 @@ export function GlassBottomBar({ state, navigation, tabConfigs }: Props) {
     visibleRoutes.findIndex((r) => r.key === state.routes[state.index]?.key),
   )
 
-  // Springs between tab indices. pageWidth=1 so this IS the progress value.
   const tabPosition = useSharedValue<number>(activeVisibleIndex)
 
   useEffect(() => {
@@ -79,6 +79,7 @@ export function GlassBottomBar({ state, navigation, tabConfigs }: Props) {
       pointerEvents="box-none"
       style={[styles.container, { bottom: Math.max(insets.bottom, 12) }]}
     >
+      {/* Glass navbar — left-aligned */}
       <GlassNavbar
         tabs={tabs}
         barWidth={barWidth}
@@ -86,6 +87,29 @@ export function GlassBottomBar({ state, navigation, tabConfigs }: Props) {
         scrollX={tabPosition}
         onTabPress={onTabPress}
       />
+
+      {/* Plus button — glass style matching the navbar */}
+      <TouchableOpacity
+        style={styles.fabWrap}
+        onPress={() => router.push('/create')}
+        activeOpacity={0.85}
+      >
+        <View style={styles.fabShadow} />
+        <View style={styles.fabClip}>
+          <BlurView
+            intensity={Platform.OS === 'ios' ? 80 : 60}
+            tint="dark"
+            {...(Platform.OS === 'android'
+              ? ({ experimentalBlurMethod: 'dimezisBlurView' } as any)
+              : {})}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.fabWash} />
+          <View style={styles.fabHighlight} />
+          <View style={styles.fabHairline} />
+          <Ionicons name="add" size={24} color={Colors.textInverse} />
+        </View>
+      </TouchableOpacity>
     </View>
   )
 }
@@ -93,8 +117,49 @@ export function GlassBottomBar({ state, navigation, tabConfigs }: Props) {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    left: BAR_INSET,
-    right: BAR_INSET,
+    left: SIDE_INSET,
+    right: SIDE_INSET,
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: GAP,
+  },
+  fabWrap: {
+    width: BAR_HEIGHT,
+    height: BAR_HEIGHT,
+  },
+  fabShadow: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: BAR_HEIGHT / 2,
+    backgroundColor: 'transparent',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 10,
+  },
+  fabClip: {
+    flex: 1,
+    borderRadius: BAR_HEIGHT / 2,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fabWash: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  fabHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 8,
+    right: 8,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  fabHairline: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: BAR_HEIGHT / 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.12)',
   },
 })

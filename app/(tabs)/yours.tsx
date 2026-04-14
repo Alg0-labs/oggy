@@ -15,6 +15,7 @@ export default function YoursScreen() {
       <View style={styles.content}>
         <YourAppsContent />
       </View>
+
     </View>
   )
 }
