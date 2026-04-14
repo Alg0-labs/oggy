@@ -1,8 +1,7 @@
-import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
 import React from "react";
 import {
-  Alert,
   FlatList,
   StyleSheet,
   Text,
@@ -12,19 +11,16 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FeedCard } from "../../components/FeedCard";
 import { feedPosts } from "../../constants/mockFeed";
-import { Colors, Spacing, Type } from "../../constants/theme";
+import { mockProfile } from "../../constants/mockProfile";
+import { Colors, Fonts, Radius, Spacing, Type } from "../../constants/theme";
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
-  const onPressNotifications = () => {
+  const onPressProfile = () => {
     Haptics.selectionAsync();
-    Alert.alert("Activity", "3 new likes · 1 new follower · 2 remixes today");
-  };
-
-  const onPressMessages = () => {
-    Haptics.selectionAsync();
-    Alert.alert("Messages", "Your inbox is empty. Share an app to get a DM.");
+    router.push("/settings");
   };
 
   return (
@@ -38,32 +34,19 @@ export default function HomeScreen() {
           <View>
             <View style={styles.topBar}>
               <Text style={styles.brand}>oggy.</Text>
-              <View style={styles.topActions}>
-                <TouchableOpacity
-                  style={styles.topIcon}
-                  activeOpacity={0.7}
-                  hitSlop={8}
-                  onPress={onPressNotifications}
-                >
-                  <Ionicons
-                    name="heart-outline"
-                    size={24}
-                    color={Colors.text}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.topIcon}
-                  activeOpacity={0.7}
-                  hitSlop={8}
-                  onPress={onPressMessages}
-                >
-                  <Ionicons
-                    name="paper-plane-outline"
-                    size={22}
-                    color={Colors.text}
-                  />
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                hitSlop={8}
+                onPress={onPressProfile}
+                style={[
+                  styles.profileAvatar,
+                  { backgroundColor: mockProfile.avatarColor },
+                ]}
+              >
+                <Text style={styles.profileInitials}>
+                  {mockProfile.avatarInitials}
+                </Text>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.header}>
@@ -98,16 +81,20 @@ const styles = StyleSheet.create({
     color: Colors.text,
     letterSpacing: -0.8,
   },
-  topActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.md,
-  },
-  topIcon: {
+  profileAvatar: {
     width: 36,
     height: 36,
+    borderRadius: Radius.pill,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 2,
+    borderColor: Colors.bg,
+  },
+  profileInitials: {
+    fontFamily: Fonts.sansBold,
+    fontSize: 13,
+    color: Colors.textInverse,
+    letterSpacing: 0.2,
   },
   header: {
     paddingHorizontal: Spacing.lg,

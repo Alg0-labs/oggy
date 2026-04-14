@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   View,
   Text,
@@ -9,12 +9,16 @@ import {
   Alert,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useAppStore } from '../../store/appStore'
 import { keychainManager } from '../../services/storage/keychain'
 import { createLLMService } from '../../services/llm/factory'
 import { Colors, Spacing, Radius, Type } from '../../constants/theme'
 import { mockProfile } from '../../constants/mockProfile'
+import { AppCard } from '../../components/AppCard'
+
+type YoursFilter = 'all' | 'public' | 'private'
 
 type Provider = 'openai' | 'google' | 'anthropic'
 
@@ -44,9 +48,21 @@ function formatCount(n: number): string {
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets()
+  const router = useRouter()
   const settings = useAppStore((s) => s.settings)
   const setSetting = useAppStore((s) => s.setSetting)
   const apps = useAppStore((s) => s.apps)
+  const deleteApp = useAppStore((s) => s.deleteApp)
+  const [yoursFilter, setYoursFilter] = useState<YoursFilter>('all')
+
+  const sortedYours = useMemo(() => {
+    const list = [...apps].sort(
+      (a, b) =>
+        new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime(),
+    )
+    if (yoursFilter === 'all') return list
+    return list.filter((a) => (a.visibility ?? 'private') === yoursFilter)
+  }, [apps, yoursFilter])
 
   const [keys, setKeys] = useState<Record<Provider, string>>({
     openai: '',
@@ -199,6 +215,82 @@ export default function SettingsScreen() {
           <Text style={styles.socialPillOutlinedText}>Share profile</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Your apps */}
+      <Text style={styles.sectionLabel}>Your apps</Text>
+      <View style={styles.filterRow}>
+        {(['all', 'public', 'private'] as YoursFilter[]).map((f) => {
+          const active = yoursFilter === f
+          return (
+            <TouchableOpacity
+              key={f}
+              style={[
+                styles.filterPill,
+                active ? styles.filterPillActive : styles.filterPillInactive,
+              ]}
+              onPress={() => setYoursFilter(f)}
+              activeOpacity={0.85}
+            >
+              {f !== 'all' && (
+                <Ionicons
+                  name={f === 'public' ? 'globe-outline' : 'lock-closed'}
+                  size={12}
+                  color={active ? Colors.textInverse : Colors.text}
+                />
+              )}
+              <Text
+                style={[
+                  styles.filterText,
+                  { color: active ? Colors.textInverse : Colors.text },
+                ]}
+              >
+                {f[0].toUpperCase() + f.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          )
+        })}
+      </View>
+
+      {sortedYours.length === 0 ? (
+        <View style={styles.yoursEmpty}>
+          <View style={styles.yoursEmptyIcon}>
+            <Ionicons name="sparkles-outline" size={24} color={Colors.text} />
+          </View>
+          <Text style={styles.yoursEmptyTitle}>
+            {yoursFilter === 'all'
+              ? 'Nothing here yet'
+              : `No ${yoursFilter} apps`}
+          </Text>
+          <Text style={styles.yoursEmptyText}>
+            Describe your first mini-app. It runs natively on this device — no
+            webviews.
+          </Text>
+          <TouchableOpacity
+            style={styles.yoursCta}
+            onPress={() => router.push('/create')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.yoursCtaText}>Create new app</Text>
+            <Ionicons
+              name="arrow-forward"
+              size={16}
+              color={Colors.textInverse}
+            />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.yoursGrid}>
+          {sortedYours.map((item) => (
+            <View key={item.id} style={styles.yoursGridItem}>
+              <AppCard
+                app={item}
+                onPress={() => router.push(`/preview/${item.id}`)}
+                onLongPress={() => deleteApp(item.id)}
+              />
+            </View>
+          ))}
+        </View>
+      )}
 
       {/* Active Provider */}
       <Text style={styles.sectionLabel}>Active provider</Text>
@@ -556,6 +648,80 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: Spacing.md,
     marginTop: Spacing.xl,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  filterPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: Radius.pill,
+    borderWidth: 2,
+  },
+  filterPillActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  filterPillInactive: {
+    backgroundColor: 'transparent',
+    borderColor: Colors.primary,
+  },
+  filterText: {
+    ...Type.button,
+    fontSize: 13,
+  },
+  yoursGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.md,
+  },
+  yoursGridItem: {
+    width: '48%',
+  },
+  yoursEmpty: {
+    alignItems: 'flex-start',
+    backgroundColor: Colors.surfaceMuted,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+  },
+  yoursEmptyIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+  },
+  yoursEmptyTitle: {
+    ...Type.heading3,
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  yoursEmptyText: {
+    ...Type.bodySmall,
+    color: Colors.textSecondary,
+    maxWidth: 320,
+    marginBottom: Spacing.md,
+  },
+  yoursCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+    borderRadius: Radius.pill,
+  },
+  yoursCtaText: {
+    ...Type.button,
+    fontSize: 14,
+    color: Colors.textInverse,
   },
   providerRow: {
     flexDirection: 'row',
