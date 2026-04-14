@@ -1,8 +1,6 @@
 import { BlurView } from "expo-blur";
-import * as Haptics from "expo-haptics";
-import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 import Animated, {
   interpolate,
   useAnimatedScrollHandler,
@@ -19,8 +17,8 @@ import {
 import type { TabConfig } from "../../components/glass-nav/types";
 import { DiscoverContent } from "../../components/home/DiscoverContent";
 import { FollowingContent } from "../../components/home/FollowingContent";
-import { mockProfile } from "../../constants/mockProfile";
-import { Colors, Fonts, Radius, Spacing, Type } from "../../constants/theme";
+import { ProfileAvatarButton } from "../../components/ProfileAvatarButton";
+import { Colors, Spacing, Type } from "../../constants/theme";
 
 type HomeTab = "discover" | "following";
 
@@ -48,7 +46,6 @@ const SCROLL_THRESHOLD = 8;
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const [tabIndex, setTabIndex] = useState(1);
   const tabPosition = useSharedValue(1);
 
@@ -59,11 +56,6 @@ export default function HomeScreen() {
       mass: 0.9,
     });
   }, [tabIndex]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const onPressProfile = () => {
-    Haptics.selectionAsync();
-    router.push("/settings");
-  };
 
   const onSelectTab = useCallback((index: number) => {
     setTabIndex(index);
@@ -148,19 +140,7 @@ export default function HomeScreen() {
             style={StyleSheet.absoluteFill}
           />
           <Text style={styles.brand}>oggy.</Text>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            hitSlop={8}
-            onPress={onPressProfile}
-            style={[
-              styles.profileAvatar,
-              { backgroundColor: mockProfile.avatarColor },
-            ]}
-          >
-            <Text style={styles.profileInitials}>
-              {mockProfile.avatarInitials}
-            </Text>
-          </TouchableOpacity>
+          <ProfileAvatarButton />
         </View>
 
         {/* Segment pill — slides up on scroll down */}
@@ -207,21 +187,6 @@ const styles = StyleSheet.create({
     ...Type.heading2,
     color: Colors.text,
     letterSpacing: -0.8,
-  },
-  profileAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: Colors.bg,
-  },
-  profileInitials: {
-    fontFamily: Fonts.sansBold,
-    fontSize: 13,
-    color: Colors.textInverse,
-    letterSpacing: 0.2,
   },
   segmentWrap: {
     paddingLeft: Spacing.lg,
