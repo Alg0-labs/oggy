@@ -19,6 +19,8 @@ import { CommentsSheet } from './CommentsSheet'
 
 interface FeedCardProps {
   post: FeedPost
+  showLikeCount?: boolean
+  commentsEnabled?: boolean
 }
 
 function relativeTime(iso: string): string {
@@ -40,7 +42,11 @@ function shareUrl(postId: string): string {
   return `https://oggy.app/p/${postId}`
 }
 
-export function FeedCard({ post }: FeedCardProps) {
+export function FeedCard({
+  post,
+  showLikeCount = true,
+  commentsEnabled = true,
+}: FeedCardProps) {
   const [liked, setLiked] = useState(false)
   const [saved, setSaved] = useState(false)
   const [likeDelta, setLikeDelta] = useState(0)
@@ -182,16 +188,30 @@ export function FeedCard({ post }: FeedCardProps) {
 
       <View style={styles.actions}>
         <View style={styles.actionsLeft}>
-          <TouchableOpacity onPress={toggleLike} activeOpacity={0.7} hitSlop={6}>
+          <TouchableOpacity
+            onPress={toggleLike}
+            activeOpacity={0.7}
+            hitSlop={6}
+          >
             <Ionicons
               name={liked ? 'heart' : 'heart-outline'}
               size={26}
               color={liked ? Colors.pink : Colors.text}
             />
           </TouchableOpacity>
-          <TouchableOpacity onPress={openComments} activeOpacity={0.7} hitSlop={6}>
-            <Ionicons name="chatbubble-outline" size={24} color={Colors.text} />
-          </TouchableOpacity>
+          {commentsEnabled && (
+            <TouchableOpacity
+              onPress={openComments}
+              activeOpacity={0.7}
+              hitSlop={6}
+            >
+              <Ionicons
+                name="chatbubble-outline"
+                size={24}
+                color={Colors.text}
+              />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity onPress={onShare} activeOpacity={0.7} hitSlop={6}>
             <Ionicons name="paper-plane-outline" size={24} color={Colors.text} />
           </TouchableOpacity>
@@ -205,9 +225,13 @@ export function FeedCard({ post }: FeedCardProps) {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.likes}>
-        {formatCount(totalLikes)} likes · {formatCount(post.remixes)} remixes
-      </Text>
+      {(showLikeCount || post.remixes > 0) && (
+        <Text style={styles.likes}>
+          {showLikeCount
+            ? `${formatCount(totalLikes)} likes · ${formatCount(post.remixes)} remixes`
+            : `${formatCount(post.remixes)} remixes`}
+        </Text>
+      )}
 
       <Text style={styles.caption}>
         <Text
@@ -220,7 +244,7 @@ export function FeedCard({ post }: FeedCardProps) {
         {post.caption}
       </Text>
 
-      {totalComments > 0 && (
+      {commentsEnabled && totalComments > 0 && (
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={openComments}
@@ -232,23 +256,27 @@ export function FeedCard({ post }: FeedCardProps) {
         </TouchableOpacity>
       )}
 
-      {[...post.topComments, ...extraComments].slice(-2).map((c) => (
-        <Pressable key={c.id} onPress={openComments} style={styles.commentRow}>
-          <Text style={styles.commentText}>
-            <Text style={styles.commentAuthor}>{c.authorHandle}</Text> {c.text}
-          </Text>
-        </Pressable>
-      ))}
+      {commentsEnabled &&
+        [...post.topComments, ...extraComments].slice(-2).map((c) => (
+          <Pressable key={c.id} onPress={openComments} style={styles.commentRow}>
+            <Text style={styles.commentText}>
+              <Text style={styles.commentAuthor}>{c.authorHandle}</Text>{' '}
+              {c.text}
+            </Text>
+          </Pressable>
+        ))}
 
       <Text style={styles.timestamp}>{relativeTime(post.createdAt)} ago</Text>
 
-      <CommentsSheet
-        visible={commentsOpen}
-        post={post}
-        extraComments={extraComments}
-        onClose={closeComments}
-        onAddComment={addComment}
-      />
+      {commentsEnabled && (
+        <CommentsSheet
+          visible={commentsOpen}
+          post={post}
+          extraComments={extraComments}
+          onClose={closeComments}
+          onAddComment={addComment}
+        />
+      )}
     </View>
   )
 }
