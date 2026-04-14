@@ -21,6 +21,7 @@ interface TabButtonProps {
   scrollX: SharedValue<number>
   pageWidth: number
   onPress: (index: number) => void
+  showLabel?: boolean
 }
 
 /**
@@ -38,6 +39,7 @@ export function TabButton({
   scrollX,
   pageWidth,
   onPress,
+  showLabel = true,
 }: TabButtonProps) {
   const handlePress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
@@ -72,15 +74,17 @@ export function TabButton({
       <Animated.View style={[styles.content, animStyle]}>
         <View style={styles.iconWrap}>
           <Animated.View style={[styles.iconLayer, activeIconStyle]}>
-            <Ionicons name={iconActive ?? icon} size={18} color={Colors.text} />
+            <Ionicons name={iconActive ?? icon} size={22} color={Colors.text} />
           </Animated.View>
           <Animated.View style={[styles.iconLayer, inactiveIconStyle]}>
-            <Ionicons name={icon} size={18} color="rgba(25,28,31,0.5)" />
+            <Ionicons name={icon} size={22} color="rgba(25,28,31,0.5)" />
           </Animated.View>
         </View>
-        <Text style={styles.label} numberOfLines={1}>
-          {label}
-        </Text>
+        {showLabel && (
+          <Text style={styles.label} numberOfLines={1}>
+            {label}
+          </Text>
+        )}
         {badge != null && badge > 0 && (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{badge}</Text>
@@ -103,8 +107,8 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   iconWrap: {
-    width: 18,
-    height: 18,
+    width: 22,
+    height: 22,
   },
   iconLayer: {
     ...StyleSheet.absoluteFillObject,

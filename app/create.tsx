@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   TextInput,
   KeyboardAvoidingView,
   Platform,
@@ -20,6 +19,7 @@ import { PromptInput } from '../components/PromptInput'
 import { GeneratingOverlay } from '../components/GeneratingOverlay'
 import { DynamicJSXExecutor } from '../components/DynamicJSXExecutor'
 import { ErrorBoundary } from '../components/ErrorBoundary'
+import { IconButton, ScreenHeader, PillButton } from '../components/ui'
 import { Colors, Spacing, Radius, Type } from '../constants/theme'
 
 type Phase = 'prompt' | 'preview'
@@ -90,34 +90,20 @@ export default function CreateScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerBtn}
-          onPress={handleBack}
-          activeOpacity={0.85}
-        >
-          <Ionicons
-            name={phase === 'preview' ? 'chevron-back' : 'close'}
-            size={20}
-            color={Colors.text}
+      <ScreenHeader
+        title={phase === 'prompt' ? 'Create' : 'Preview'}
+        left={
+          <IconButton
+            icon={phase === 'preview' ? 'chevron-back' : 'close'}
+            onPress={handleBack}
           />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {phase === 'prompt' ? 'Create' : 'Preview'}
-        </Text>
-        {phase === 'preview' && status === 'success' ? (
-          <TouchableOpacity
-            style={styles.savePill}
-            onPress={handleSave}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.savePillText}>Save</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.headerBtn} />
-        )}
-      </View>
+        }
+        right={
+          phase === 'preview' && status === 'success' ? (
+            <PillButton label="Save" onPress={handleSave} />
+          ) : undefined
+        }
+      />
 
       {phase === 'prompt' ? (
         <KeyboardAvoidingView
@@ -151,15 +137,15 @@ export default function CreateScreen() {
             <Text style={styles.sectionLabel}>Try one</Text>
             <View style={styles.suggestionList}>
               {SUGGESTIONS.map((s) => (
-                <TouchableOpacity
+                <PillButton
                   key={s}
-                  style={styles.suggestion}
+                  label={s}
+                  iconRight="arrow-forward"
+                  variant="outline"
+                  size="md"
                   onPress={() => setPrompt(s)}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.suggestionText}>{s}</Text>
-                  <Ionicons name="arrow-forward" size={14} color={Colors.text} />
-                </TouchableOpacity>
+                  style={styles.suggestion}
+                />
               ))}
             </View>
 
@@ -170,19 +156,14 @@ export default function CreateScreen() {
               onChange={(p) => setSetting('selectedProvider', p)}
             />
 
-            {/* Generate button */}
-            <TouchableOpacity
-              style={[
-                styles.generateBtn,
-                !prompt.trim() && styles.generateBtnDisabled,
-              ]}
+            <PillButton
+              label="Generate app"
+              iconRight="sparkles"
+              size="lg"
               onPress={handleGenerate}
               disabled={!prompt.trim() || isGenerating}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.generateText}>Generate app</Text>
-              <Ionicons name="sparkles" size={18} color={Colors.textInverse} />
-            </TouchableOpacity>
+              style={styles.generateBtn}
+            />
           </ScrollView>
         </KeyboardAvoidingView>
       ) : (
@@ -194,14 +175,11 @@ export default function CreateScreen() {
               </View>
               <Text style={styles.errorTitle}>Generation failed</Text>
               <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity
-                style={styles.retryBtn}
+              <PillButton
+                label="Try again"
+                icon="refresh"
                 onPress={handleRetry}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="refresh" size={16} color={Colors.textInverse} />
-                <Text style={styles.retryText}>Try again</Text>
-              </TouchableOpacity>
+              />
             </View>
           )}
 
@@ -230,36 +208,6 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-  },
-  headerBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.pill,
-    backgroundColor: Colors.surfaceMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    ...Type.button,
-    color: Colors.text,
-  },
-  savePill: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: Radius.pill,
-    backgroundColor: Colors.primary,
-  },
-  savePillText: {
-    ...Type.button,
-    fontSize: 14,
-    color: Colors.textInverse,
   },
   promptContent: {
     padding: Spacing.lg,
@@ -293,37 +241,10 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   suggestion: {
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    gap: Spacing.md,
-    backgroundColor: Colors.surfaceMuted,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 14,
-    borderRadius: Radius.pill,
-  },
-  suggestionText: {
-    ...Type.bodySemibold,
-    color: Colors.text,
-    flex: 1,
-    fontSize: 14,
   },
   generateBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.pill,
-    paddingVertical: 18,
     marginTop: Spacing.xxl,
-  },
-  generateBtnDisabled: {
-    opacity: 0.35,
-  },
-  generateText: {
-    ...Type.button,
-    color: Colors.textInverse,
   },
   previewContainer: {
     flex: 1,
@@ -361,18 +282,5 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: Spacing.xl,
-  },
-  retryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    borderRadius: Radius.pill,
-    backgroundColor: Colors.primary,
-  },
-  retryText: {
-    ...Type.button,
-    color: Colors.textInverse,
   },
 })

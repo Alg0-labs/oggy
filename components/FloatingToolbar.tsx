@@ -3,9 +3,8 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
 } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { IconButton } from './ui'
 import { Colors, Radius, Spacing, Type } from '../constants/theme'
 
 interface FloatingToolbarProps {
@@ -26,9 +25,7 @@ export function FloatingToolbar({
   const isPublic = visibility === 'public'
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.button} onPress={onBack} activeOpacity={0.85}>
-        <Ionicons name="chevron-back" size={20} color={Colors.textInverse} />
-      </TouchableOpacity>
+      <IconButton icon="chevron-back" size="lg" variant="inverse" onPress={onBack} />
 
       {title && (
         <View style={styles.titleWrap}>
@@ -40,22 +37,15 @@ export function FloatingToolbar({
 
       <View style={styles.right}>
         {onToggleVisibility && (
-          <TouchableOpacity
-            style={styles.button}
+          <IconButton
+            icon={isPublic ? 'globe-outline' : 'lock-closed'}
+            size="lg"
+            variant="inverse"
             onPress={onToggleVisibility}
-            activeOpacity={0.85}
-          >
-            <Ionicons
-              name={isPublic ? 'globe-outline' : 'lock-closed'}
-              size={18}
-              color={Colors.textInverse}
-            />
-          </TouchableOpacity>
+          />
         )}
         {onDelete && (
-          <TouchableOpacity style={styles.button} onPress={onDelete} activeOpacity={0.85}>
-            <Ionicons name="trash-outline" size={18} color={Colors.textInverse} />
-          </TouchableOpacity>
+          <IconButton icon="trash-outline" size="lg" variant="inverse" onPress={onDelete} />
         )}
       </View>
     </View>
@@ -74,14 +64,6 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     zIndex: 50,
   },
-  button: {
-    width: 44,
-    height: 44,
-    borderRadius: Radius.pill,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   titleWrap: {
     flex: 1,
     paddingHorizontal: Spacing.md,
@@ -91,9 +73,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    ...Type.button,
+    ...Type.buttonSmall,
     color: Colors.textInverse,
-    fontSize: 14,
   },
   right: {
     flexDirection: 'row',

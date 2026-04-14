@@ -1,9 +1,6 @@
-import * as Haptics from 'expo-haptics'
-import { BlurView } from 'expo-blur'
-import { useRouter } from 'expo-router'
-import React, { useCallback, useEffect, useState } from 'react'
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useCallback, useEffect, useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
 import Animated, {
   interpolate,
   useAnimatedScrollHandler,
@@ -11,99 +8,105 @@ import Animated, {
   useSharedValue,
   withSpring,
   withTiming,
-} from 'react-native-reanimated'
-import { DiscoverContent } from '../../components/home/DiscoverContent'
-import { FollowingContent } from '../../components/home/FollowingContent'
-import { GlassNavbar, BAR_HEIGHT } from '../../components/glass-nav/GlassNavbar'
-import type { TabConfig } from '../../components/glass-nav/types'
-import { mockProfile } from '../../constants/mockProfile'
-import { Colors, Fonts, Radius, Spacing, Type } from '../../constants/theme'
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  BAR_HEIGHT,
+  GlassNavbar,
+} from "../../components/glass-nav/GlassNavbar";
+import type { TabConfig } from "../../components/glass-nav/types";
+import { DiscoverContent } from "../../components/home/DiscoverContent";
+import { FollowingContent } from "../../components/home/FollowingContent";
+import { ProfileAvatarButton } from "../../components/ProfileAvatarButton";
+import { Colors, Spacing, Springs, Type } from "../../constants/theme";
 
-type HomeTab = 'discover' | 'following'
+type HomeTab = "discover" | "following";
 
-const TOP_BAR_WIDTH = 240
+function FadeOverlay({ height }: { height: number }) {
+  return (
+    <LinearGradient
+      pointerEvents="none"
+      colors={["#ffffff", "rgba(255,255,255,0.95)", "rgba(255,255,255,0)"]}
+      locations={[0, 0.6, 1]}
+      style={[StyleSheet.absoluteFill, { height }]}
+    />
+  );
+}
+
+const TOP_BAR_WIDTH = 240;
 const TOP_TABS: TabConfig[] = [
   {
-    key: 'discover',
-    label: 'Discover',
-    icon: 'compass-outline',
-    iconActive: 'compass',
+    key: "discover",
+    label: "Discover",
+    icon: "compass-outline",
+    iconActive: "compass",
   },
   {
-    key: 'following',
-    label: 'Following',
-    icon: 'people-outline',
-    iconActive: 'people',
+    key: "following",
+    label: "Following",
+    icon: "people-outline",
+    iconActive: "people",
   },
-]
+];
 
-const BRAND_ROW_HEIGHT = 44
-const NAV_TOP_GAP = Spacing.sm
+const BRAND_ROW_HEIGHT = 44;
+const NAV_TOP_GAP = Spacing.sm;
 
 // Minimum scroll delta before we commit to showing/hiding
-const SCROLL_THRESHOLD = 8
+const SCROLL_THRESHOLD = 8;
 
 export default function HomeScreen() {
-  const insets = useSafeAreaInsets()
-  const router = useRouter()
-  const [tabIndex, setTabIndex] = useState(1)
-  const tabPosition = useSharedValue(1)
+  const insets = useSafeAreaInsets();
+  const [tabIndex, setTabIndex] = useState(1);
+  const tabPosition = useSharedValue(1);
 
   useEffect(() => {
-    tabPosition.value = withSpring(tabIndex, {
-      damping: 18,
-      stiffness: 180,
-      mass: 0.9,
-    })
-  }, [tabIndex]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const onPressProfile = () => {
-    Haptics.selectionAsync()
-    router.push('/settings')
-  }
+    tabPosition.value = withSpring(tabIndex, Springs.tab);
+  }, [tabIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onSelectTab = useCallback((index: number) => {
-    setTabIndex(index)
-  }, [])
+    setTabIndex(index);
+  }, []);
 
-  const currentTab: HomeTab = TOP_TABS[tabIndex]?.key as HomeTab
+  const currentTab: HomeTab = TOP_TABS[tabIndex]?.key as HomeTab;
 
   // Total header height for translateY calculation
-  const headerHeight = insets.top + BRAND_ROW_HEIGHT + NAV_TOP_GAP + BAR_HEIGHT + Spacing.sm
-  const topClearance = headerHeight
+  const headerHeight =
+    insets.top + BRAND_ROW_HEIGHT + NAV_TOP_GAP + BAR_HEIGHT + Spacing.sm;
+  const topClearance = headerHeight;
 
   // ── Scroll-direction tracking ──────────────────────────────────────────────
   // 0 = fully visible, 1 = fully hidden
-  const headerHidden = useSharedValue(0)
-  const lastScrollY = useSharedValue(0)
-  const scrollDirection = useSharedValue(0) // cumulative delta
+  const headerHidden = useSharedValue(0);
+  const lastScrollY = useSharedValue(0);
+  const scrollDirection = useSharedValue(0); // cumulative delta
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
-      const y = e.contentOffset.y
-      const delta = y - lastScrollY.value
-      lastScrollY.value = y
+      const y = e.contentOffset.y;
+      const delta = y - lastScrollY.value;
+      lastScrollY.value = y;
 
       // Near the top — always show
       if (y < 10) {
-        headerHidden.value = withTiming(0, { duration: 220 })
-        scrollDirection.value = 0
-        return
+        headerHidden.value = withTiming(0, { duration: 220 });
+        scrollDirection.value = 0;
+        return;
       }
 
-      scrollDirection.value += delta
+      scrollDirection.value += delta;
 
       if (scrollDirection.value > SCROLL_THRESHOLD) {
         // Scrolling down past threshold — hide
-        headerHidden.value = withTiming(1, { duration: 260 })
-        scrollDirection.value = 0
+        headerHidden.value = withTiming(1, { duration: 260 });
+        scrollDirection.value = 0;
       } else if (scrollDirection.value < -SCROLL_THRESHOLD) {
         // Scrolling up past threshold — show
-        headerHidden.value = withTiming(0, { duration: 220 })
-        scrollDirection.value = 0
+        headerHidden.value = withTiming(0, { duration: 220 });
+        scrollDirection.value = 0;
       }
     },
-  })
+  });
 
   // Only the segment pill hides — slides up behind the brand bar and fades
   const segmentAnimStyle = useAnimatedStyle(() => ({
@@ -117,46 +120,35 @@ export default function HomeScreen() {
       },
     ],
     opacity: interpolate(headerHidden.value, [0, 0.6], [1, 0]),
-  }))
+  }));
 
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        {currentTab === 'discover' && (
+        {currentTab === "discover" && (
           <DiscoverContent topInset={topClearance} onScroll={scrollHandler} />
         )}
-        {currentTab === 'following' && (
+        {currentTab === "following" && (
           <FollowingContent topInset={topClearance} onScroll={scrollHandler} />
         )}
       </View>
 
       {/* Floating header */}
-      <View
-        pointerEvents="box-none"
-        style={styles.headerFloat}
-      >
+      <View pointerEvents="box-none" style={styles.headerFloat}>
+        {/* Gradient fade — covers only the brand row, not the segment nav */}
+        <FadeOverlay height={insets.top + BRAND_ROW_HEIGHT + Spacing.md} />
+
         {/* Brand row — always visible */}
         <View style={[styles.topBar, { paddingTop: insets.top }]}>
-          <BlurView tint="light" intensity={80} style={StyleSheet.absoluteFill} />
-          <View style={styles.brandWash} />
           <Text style={styles.brand}>oggy.</Text>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            hitSlop={8}
-            onPress={onPressProfile}
-            style={[
-              styles.profileAvatar,
-              { backgroundColor: mockProfile.avatarColor },
-            ]}
-          >
-            <Text style={styles.profileInitials}>
-              {mockProfile.avatarInitials}
-            </Text>
-          </TouchableOpacity>
+          <ProfileAvatarButton />
         </View>
 
         {/* Segment pill — slides up on scroll down */}
-        <Animated.View style={[styles.segmentWrap, segmentAnimStyle]} pointerEvents="box-none">
+        <Animated.View
+          style={[styles.segmentWrap, segmentAnimStyle]}
+          pointerEvents="box-none"
+        >
           <GlassNavbar
             tabs={TOP_TABS}
             barWidth={TOP_BAR_WIDTH}
@@ -166,9 +158,8 @@ export default function HomeScreen() {
           />
         </Animated.View>
       </View>
-
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -180,46 +171,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerFloat: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
   },
   topBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.sm,
-    overflow: 'hidden',
-  },
-  brandWash: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.45)',
+    overflow: "hidden",
   },
   brand: {
     ...Type.heading2,
     color: Colors.text,
     letterSpacing: -0.8,
   },
-  profileAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: Colors.bg,
-  },
-  profileInitials: {
-    fontFamily: Fonts.sansBold,
-    fontSize: 13,
-    color: Colors.textInverse,
-    letterSpacing: 0.2,
-  },
   segmentWrap: {
     paddingLeft: Spacing.lg,
     marginTop: NAV_TOP_GAP,
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
-})
+});

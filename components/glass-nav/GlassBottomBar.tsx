@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { GlassNavbar, BAR_HEIGHT } from './GlassNavbar'
 import type { IoniconName, TabConfig } from './types'
-import { Colors } from '../../constants/theme'
+import { Colors, Springs, ACTIVE_OPACITY } from '../../constants/theme'
 
 const SIDE_INSET = 24
 const GAP = 12
@@ -41,11 +41,7 @@ export function GlassBottomBar({ state, navigation, tabConfigs }: Props) {
   const tabPosition = useSharedValue<number>(activeVisibleIndex)
 
   useEffect(() => {
-    tabPosition.value = withSpring(activeVisibleIndex, {
-      damping: 18,
-      stiffness: 180,
-      mass: 0.9,
-    })
+    tabPosition.value = withSpring(activeVisibleIndex, Springs.tab)
   }, [activeVisibleIndex]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const tabs: TabConfig[] = visibleRoutes.map((route) => {
@@ -86,19 +82,20 @@ export function GlassBottomBar({ state, navigation, tabConfigs }: Props) {
         pageWidth={1}
         scrollX={tabPosition}
         onTabPress={onTabPress}
+        showLabels={false}
       />
 
       {/* Plus button — glass style matching the navbar */}
       <TouchableOpacity
         style={styles.fabWrap}
         onPress={() => router.push('/create')}
-        activeOpacity={0.85}
+        activeOpacity={ACTIVE_OPACITY}
       >
         <View style={styles.fabShadow} />
         <View style={styles.fabClip}>
           <BlurView
-            intensity={Platform.OS === 'ios' ? 80 : 60}
-            tint="dark"
+            intensity={Platform.OS === 'ios' ? 60 : 50}
+            tint={Platform.OS === 'ios' ? 'systemUltraThinMaterialDark' : 'dark'}
             {...(Platform.OS === 'android'
               ? ({ experimentalBlurMethod: 'dimezisBlurView' } as any)
               : {})}

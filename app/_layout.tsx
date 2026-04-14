@@ -75,6 +75,18 @@ export default function RootLayout() {
             headerShown: false,
           }}
         />
+        <Stack.Screen
+          name="profile"
+          options={{
+            animation: "slide_from_right",
+          }}
+        />
+        <Stack.Screen
+          name="settings"
+          options={{
+            animation: "slide_from_right",
+          }}
+        />
       </Stack>
       <StatusBar style="dark" />
     </GestureHandlerRootView>
