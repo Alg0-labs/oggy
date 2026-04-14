@@ -1,6 +1,6 @@
-import { Ionicons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
-import React, { useMemo, useState } from 'react'
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useMemo, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -8,34 +8,34 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { AppCard } from '../../components/AppCard'
-import { ProfileAvatarButton } from '../../components/ProfileAvatarButton'
-import { PillButton } from '../../components/ui'
-import { useAppStore } from '../../store/appStore'
-import { APP_CATEGORIES } from '../../constants/categories'
-import { SEARCH_SUGGESTIONS } from '../../constants/searchSuggestions'
-import { Colors, Radius, Spacing, Type } from '../../constants/theme'
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AppCard } from "../../components/AppCard";
+import { ProfileAvatarButton } from "../../components/ProfileAvatarButton";
+import { PillButton } from "../../components/ui";
+import { APP_CATEGORIES } from "../../constants/categories";
+import { SEARCH_SUGGESTIONS } from "../../constants/searchSuggestions";
+import { Colors, Radius, Spacing, Type } from "../../constants/theme";
+import { useAppStore } from "../../store/appStore";
 
 export default function SearchScreen() {
-  const insets = useSafeAreaInsets()
-  const router = useRouter()
-  const apps = useAppStore((s) => s.apps)
-  const [query, setQuery] = useState('')
-  const [isFocused, setIsFocused] = useState(false)
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const apps = useAppStore((s) => s.apps);
+  const [query, setQuery] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
 
   const results = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return []
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
     return apps.filter(
       (a) =>
         a.name.toLowerCase().includes(q) || a.prompt.toLowerCase().includes(q),
-    )
-  }, [apps, query])
+    );
+  }, [apps, query]);
 
-  const showResults = query.trim().length > 0
-  const showSuggestions = isFocused && !showResults
+  const showResults = query.trim().length > 0;
+  const showSuggestions = isFocused && !showResults;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -60,7 +60,7 @@ export default function SearchScreen() {
         />
         {query.length > 0 && (
           <TouchableOpacity
-            onPress={() => setQuery('')}
+            onPress={() => setQuery("")}
             hitSlop={8}
             activeOpacity={0.7}
           >
@@ -108,7 +108,9 @@ export default function SearchScreen() {
                           variant="outline"
                           size="sm"
                           onPress={() =>
-                            router.push(`/category/${encodeURIComponent(category.label)}`)
+                            router.push(
+                              `/category/${encodeURIComponent(category.label)}`,
+                            )
                           }
                         />
                       ),
@@ -142,7 +144,7 @@ export default function SearchScreen() {
         )}
       </ScrollView>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -151,9 +153,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bg,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.xs,
@@ -164,8 +166,8 @@ const styles = StyleSheet.create({
     letterSpacing: -0.8,
   },
   searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.sm,
     backgroundColor: Colors.surfaceMuted,
     borderRadius: Radius.pill,
@@ -187,7 +189,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     ...Type.micro,
     color: Colors.textMuted,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     marginBottom: Spacing.sm,
     paddingHorizontal: Spacing.lg,
   },
@@ -196,11 +198,11 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.lg,
   },
   categoryRows: {
-    flexDirection: 'column',
+    flexDirection: "column",
     gap: Spacing.sm,
   },
   categoryRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: Spacing.sm,
   },
   suggestionList: {
@@ -213,8 +215,8 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xs,
   },
   suggestionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.sm,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -226,7 +228,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   empty: {
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
     backgroundColor: Colors.surfaceMuted,
     borderRadius: Radius.lg,
     padding: Spacing.lg,
@@ -237,8 +239,8 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: Radius.pill,
     backgroundColor: Colors.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: Spacing.md,
   },
   emptyTitle: {
@@ -252,12 +254,12 @@ const styles = StyleSheet.create({
     maxWidth: 320,
   },
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: Spacing.md,
     paddingHorizontal: Spacing.lg,
   },
   gridItem: {
-    width: '48%',
+    width: "48%",
   },
-})
+});

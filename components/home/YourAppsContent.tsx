@@ -1,68 +1,73 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native'
-import { useRouter } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
-import { useSharedValue, withSpring } from 'react-native-reanimated'
-import { AppCard } from '../AppCard'
-import { GlassNavbar } from '../glass-nav/GlassNavbar'
-import type { TabConfig } from '../glass-nav/types'
-import { PillButton } from '../ui'
-import { useAppStore } from '../../store/appStore'
-import { Colors, Radius, Spacing, Springs, Type } from '../../constants/theme'
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useEffect, useMemo, useState } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSharedValue, withSpring } from "react-native-reanimated";
+import { Colors, Radius, Spacing, Springs, Type } from "../../constants/theme";
+import { useAppStore } from "../../store/appStore";
+import { AppCard } from "../AppCard";
+import { GlassNavbar } from "../glass-nav/GlassNavbar";
+import type { TabConfig } from "../glass-nav/types";
+import { PillButton } from "../ui";
 
-type YoursFilter = 'all' | 'public' | 'private'
+type YoursFilter = "all" | "public" | "private";
 
-const FILTER_BAR_WIDTH = 300
+const FILTER_BAR_WIDTH = 300;
 const FILTERS: { key: YoursFilter; tab: TabConfig }[] = [
   {
-    key: 'all',
-    tab: { key: 'all', label: 'All', icon: 'albums-outline', iconActive: 'albums' },
-  },
-  {
-    key: 'public',
-    tab: { key: 'public', label: 'Public', icon: 'globe-outline', iconActive: 'globe' },
-  },
-  {
-    key: 'private',
+    key: "all",
     tab: {
-      key: 'private',
-      label: 'Private',
-      icon: 'lock-closed-outline',
-      iconActive: 'lock-closed',
+      key: "all",
+      label: "All",
+      icon: "albums-outline",
+      iconActive: "albums",
     },
   },
-]
+  {
+    key: "public",
+    tab: {
+      key: "public",
+      label: "Public",
+      icon: "globe-outline",
+      iconActive: "globe",
+    },
+  },
+  {
+    key: "private",
+    tab: {
+      key: "private",
+      label: "Private",
+      icon: "lock-closed-outline",
+      iconActive: "lock-closed",
+    },
+  },
+];
 
-export function YourAppsContent() {
-  const router = useRouter()
-  const apps = useAppStore((s) => s.apps)
-  const deleteApp = useAppStore((s) => s.deleteApp)
-  const [filterIndex, setFilterIndex] = useState(0)
-  const filterPosition = useSharedValue(0)
+export function YourAppsContent({ topInset = 0 }: { topInset?: number }) {
+  const router = useRouter();
+  const apps = useAppStore((s) => s.apps);
+  const deleteApp = useAppStore((s) => s.deleteApp);
+  const [filterIndex, setFilterIndex] = useState(0);
+  const filterPosition = useSharedValue(0);
 
   useEffect(() => {
-    filterPosition.value = withSpring(filterIndex, Springs.tab)
-  }, [filterIndex]) // eslint-disable-line react-hooks/exhaustive-deps
+    filterPosition.value = withSpring(filterIndex, Springs.tab);
+  }, [filterIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filter = FILTERS[filterIndex].key
+  const filter = FILTERS[filterIndex].key;
 
   const sorted = useMemo(() => {
     const list = [...apps].sort(
       (a, b) =>
         new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime(),
-    )
-    if (filter === 'all') return list
-    return list.filter((a) => (a.visibility ?? 'private') === filter)
-  }, [apps, filter])
+    );
+    if (filter === "all") return list;
+    return list.filter((a) => (a.visibility ?? "private") === filter);
+  }, [apps, filter]);
 
   return (
     <ScrollView
-      contentContainerStyle={styles.scroll}
+      contentContainerStyle={[styles.scroll, { paddingTop: topInset + Spacing.md }]}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.filterBar}>
@@ -81,7 +86,7 @@ export function YourAppsContent() {
             <Ionicons name="sparkles-outline" size={24} color={Colors.text} />
           </View>
           <Text style={styles.emptyTitle}>
-            {filter === 'all' ? 'Nothing here yet' : `No ${filter} apps`}
+            {filter === "all" ? "Nothing here yet" : `No ${filter} apps`}
           </Text>
           <Text style={styles.emptyText}>
             Describe your first mini-app. It runs natively on this device — no
@@ -90,7 +95,7 @@ export function YourAppsContent() {
           <PillButton
             label="Create new app"
             iconRight="arrow-forward"
-            onPress={() => router.push('/create')}
+            onPress={() => router.push("/create")}
           />
         </View>
       ) : (
@@ -107,30 +112,29 @@ export function YourAppsContent() {
         </View>
       )}
     </ScrollView>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
   scroll: {
-    paddingTop: Spacing.md,
     paddingBottom: 200,
   },
   filterBar: {
     width: FILTER_BAR_WIDTH,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginBottom: Spacing.md,
   },
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: Spacing.md,
     paddingHorizontal: Spacing.lg,
   },
   gridItem: {
-    width: '48%',
+    width: "48%",
   },
   empty: {
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
     backgroundColor: Colors.surfaceMuted,
     borderRadius: Radius.lg,
     padding: Spacing.lg,
@@ -141,8 +145,8 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: Radius.pill,
     backgroundColor: Colors.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: Spacing.md,
   },
   emptyTitle: {
@@ -156,4 +160,4 @@ const styles = StyleSheet.create({
     maxWidth: 320,
     marginBottom: Spacing.md,
   },
-})
+});

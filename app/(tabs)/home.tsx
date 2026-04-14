@@ -1,6 +1,6 @@
-import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useCallback, useEffect, useState } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import Animated, {
   interpolate,
   useAnimatedScrollHandler,
@@ -21,6 +21,17 @@ import { ProfileAvatarButton } from "../../components/ProfileAvatarButton";
 import { Colors, Spacing, Springs, Type } from "../../constants/theme";
 
 type HomeTab = "discover" | "following";
+
+function FadeOverlay({ height }: { height: number }) {
+  return (
+    <LinearGradient
+      pointerEvents="none"
+      colors={["#ffffff", "rgba(255,255,255,0.95)", "rgba(255,255,255,0)"]}
+      locations={[0, 0.6, 1]}
+      style={[StyleSheet.absoluteFill, { height }]}
+    />
+  );
+}
 
 const TOP_BAR_WIDTH = 240;
 const TOP_TABS: TabConfig[] = [
@@ -124,17 +135,11 @@ export default function HomeScreen() {
 
       {/* Floating header */}
       <View pointerEvents="box-none" style={styles.headerFloat}>
+        {/* Gradient fade — covers only the brand row, not the segment nav */}
+        <FadeOverlay height={insets.top + BRAND_ROW_HEIGHT + Spacing.md} />
+
         {/* Brand row — always visible */}
         <View style={[styles.topBar, { paddingTop: insets.top }]}>
-          <BlurView
-            intensity={Platform.OS === "ios" ? 60 : 40}
-            tint={
-              Platform.OS === "ios"
-                ? "systemUltraThinMaterialLight"
-                : "light"
-            }
-            style={StyleSheet.absoluteFill}
-          />
           <Text style={styles.brand}>oggy.</Text>
           <ProfileAvatarButton />
         </View>
