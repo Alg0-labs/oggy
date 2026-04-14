@@ -15,7 +15,7 @@ export interface BottomTabConfig {
 }
 
 interface Props extends BottomTabBarProps {
-  tabConfigs: BottomTabConfig[]
+  tabConfigs: Record<string, BottomTabConfig>
 }
 
 /**
@@ -31,27 +31,37 @@ export function GlassBottomBar({ state, navigation, tabConfigs }: Props) {
   const insets = useSafeAreaInsets()
   const barWidth = Dimensions.get('window').width - BAR_INSET * 2
 
+  const visibleRoutes = state.routes.filter((r) => tabConfigs[r.name])
+  const activeVisibleIndex = Math.max(
+    0,
+    visibleRoutes.findIndex((r) => r.key === state.routes[state.index]?.key),
+  )
+
   // Springs between tab indices. pageWidth=1 so this IS the progress value.
-  const tabPosition = useSharedValue<number>(state.index)
+  const tabPosition = useSharedValue<number>(activeVisibleIndex)
 
   useEffect(() => {
-    tabPosition.value = withSpring(state.index, {
+    tabPosition.value = withSpring(activeVisibleIndex, {
       damping: 18,
       stiffness: 180,
       mass: 0.9,
     })
-  }, [state.index]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeVisibleIndex]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const tabs: TabConfig[] = state.routes.map((route, i) => ({
-    key: route.key,
-    label: tabConfigs[i]?.label ?? route.name,
-    icon: tabConfigs[i]?.icon ?? 'ellipse-outline',
-    iconActive: tabConfigs[i]?.iconActive,
-  }))
+  const tabs: TabConfig[] = visibleRoutes.map((route) => {
+    const cfg = tabConfigs[route.name]
+    return {
+      key: route.key,
+      label: cfg.label,
+      icon: cfg.icon,
+      iconActive: cfg.iconActive,
+    }
+  })
 
   const onTabPress = useCallback(
     (index: number) => {
-      const route = state.routes[index]
+      const route = visibleRoutes[index]
+      if (!route) return
       const event = navigation.emit({
         type: 'tabPress',
         target: route.key,
@@ -61,7 +71,7 @@ export function GlassBottomBar({ state, navigation, tabConfigs }: Props) {
         navigation.navigate(route.name, undefined)
       }
     },
-    [state.routes, navigation],
+    [visibleRoutes, navigation],
   )
 
   return (
