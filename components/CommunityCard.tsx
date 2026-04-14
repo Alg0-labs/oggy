@@ -7,7 +7,7 @@ import {
   Dimensions,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { SavedApp } from '../store/appStore'
+import { CommunityApp } from '../constants/mockCommunity'
 import { Colors, Radius, Spacing, Type } from '../constants/theme'
 
 const CARD_GAP = Spacing.md
@@ -19,64 +19,64 @@ const providerMeta: Record<string, { icon: string; color: string; label: string 
   anthropic: { icon: 'diamond', color: Colors.providers.anthropic, label: 'Claude' },
 }
 
-interface AppCardProps {
-  app: SavedApp
-  onPress: () => void
-  onLongPress?: () => void
+function formatCount(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
+  return `${n}`
 }
 
-export function AppCard({ app, onPress, onLongPress }: AppCardProps) {
-  const provider = providerMeta[app.modelUsed] || providerMeta.openai
-  const date = new Date(app.createdDate)
-  const dateStr = date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  })
+interface CommunityCardProps {
+  app: CommunityApp
+  onPress?: () => void
+  onRemix?: () => void
+}
+
+export function CommunityCard({ app, onPress, onRemix }: CommunityCardProps) {
+  const provider = providerMeta[app.modelUsed]
 
   return (
     <TouchableOpacity
       style={styles.card}
       onPress={onPress}
-      onLongPress={onLongPress}
-      activeOpacity={0.85}
+      activeOpacity={0.9}
     >
       <View style={styles.topRow}>
         <View style={[styles.providerPill, { backgroundColor: provider.color }]}>
           <Ionicons name={provider.icon as any} size={10} color={Colors.textInverse} />
           <Text style={styles.providerLabel}>{provider.label}</Text>
         </View>
-        <View style={styles.topRight}>
-          {app.status === 'error' && (
-            <Ionicons name="alert-circle" size={16} color={Colors.danger} />
-          )}
-          <View
-            style={[
-              styles.visibilityPill,
-              app.visibility === 'public' ? styles.visibilityPublic : styles.visibilityPrivate,
-            ]}
-          >
-            <Ionicons
-              name={app.visibility === 'public' ? 'globe-outline' : 'lock-closed'}
-              size={10}
-              color={app.visibility === 'public' ? Colors.textInverse : Colors.text}
-            />
+        {app.featured && (
+          <View style={styles.featuredDot}>
+            <Ionicons name="star" size={10} color={Colors.text} />
           </View>
-        </View>
+        )}
       </View>
 
       <View style={styles.body}>
         <Text style={styles.name} numberOfLines={2}>
           {app.name}
         </Text>
-        <Text style={styles.prompt} numberOfLines={3}>
+        <Text style={styles.prompt} numberOfLines={2}>
           {app.prompt}
         </Text>
       </View>
 
+      <View style={styles.authorRow}>
+        <View style={[styles.avatar, { backgroundColor: app.author.avatarColor }]}>
+          <Text style={styles.avatarText}>{app.author.avatarInitials}</Text>
+        </View>
+        <Text style={styles.authorHandle} numberOfLines={1}>
+          {app.author.handle}
+        </Text>
+      </View>
+
       <View style={styles.footer}>
-        <Text style={styles.date}>{dateStr}</Text>
-        <View style={styles.openDot}>
-          <Ionicons name="arrow-forward" size={12} color={Colors.text} />
+        <View style={styles.metric}>
+          <Ionicons name="heart" size={12} color={Colors.pink} />
+          <Text style={styles.metricText}>{formatCount(app.likes)}</Text>
+        </View>
+        <View style={styles.metric}>
+          <Ionicons name="git-branch" size={12} color={Colors.textSecondary} />
+          <Text style={styles.metricText}>{formatCount(app.remixes)}</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     padding: Spacing.md,
     marginBottom: CARD_GAP,
-    minHeight: 180,
+    minHeight: 220,
     justifyContent: 'space-between',
   },
   topRow: {
@@ -113,29 +113,17 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 0.6,
   },
-  topRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  visibilityPill: {
+  featuredDot: {
     width: 22,
     height: 22,
     borderRadius: Radius.pill,
+    backgroundColor: Colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  visibilityPublic: {
-    backgroundColor: Colors.primary,
-  },
-  visibilityPrivate: {
-    backgroundColor: Colors.bg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
   body: {
     flex: 1,
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   name: {
     ...Type.heading3,
@@ -146,22 +134,46 @@ const styles = StyleSheet.create({
     ...Type.bodySmall,
     color: Colors.textSecondary,
   },
-  footer: {
+  authorRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 6,
+    marginBottom: Spacing.sm,
   },
-  date: {
-    ...Type.bodySmall,
-    color: Colors.textMuted,
-    fontSize: 12,
-  },
-  openDot: {
-    width: 28,
-    height: 28,
+  avatar: {
+    width: 20,
+    height: 20,
     borderRadius: Radius.pill,
-    backgroundColor: Colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: Colors.textInverse,
+    letterSpacing: 0.2,
+  },
+  authorHandle: {
+    ...Type.bodySmall,
+    fontSize: 12,
+    color: Colors.text,
+    fontWeight: '600',
+    flexShrink: 1,
+  },
+  footer: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    alignItems: 'center',
+  },
+  metric: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metricText: {
+    ...Type.bodySmall,
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: '600',
   },
 })

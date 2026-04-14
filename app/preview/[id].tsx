@@ -12,17 +12,18 @@ export default function PreviewScreen() {
   const router = useRouter()
   const app = useAppStore((s) => s.apps.find((a) => a.id === id))
   const deleteApp = useAppStore((s) => s.deleteApp)
+  const setAppVisibility = useAppStore((s) => s.setAppVisibility)
 
   if (!app) {
     return (
       <View style={styles.container}>
-        <FloatingToolbar title="Not Found" onBack={() => router.back()} />
+        <FloatingToolbar title="Not found" onBack={() => router.back()} />
       </View>
     )
   }
 
   const handleDelete = () => {
-    Alert.alert('Delete App', `Delete "${app.name}"?`, [
+    Alert.alert('Delete app', `Delete "${app.name}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -46,6 +47,17 @@ export default function PreviewScreen() {
         title={app.name}
         onBack={() => router.back()}
         onDelete={handleDelete}
+        visibility={app.visibility ?? 'private'}
+        onToggleVisibility={() => {
+          const next = app.visibility === 'public' ? 'private' : 'public'
+          setAppVisibility(app.id, next)
+          Alert.alert(
+            next === 'public' ? 'Published' : 'Made private',
+            next === 'public'
+              ? `"${app.name}" is now visible in the public gallery.`
+              : `"${app.name}" is now only visible to you.`
+          )
+        }}
       />
     </View>
   )
@@ -58,7 +70,7 @@ const styles = StyleSheet.create({
   },
   executor: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    marginTop: 90,
+    backgroundColor: Colors.bg,
+    marginTop: 110,
   },
 })

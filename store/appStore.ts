@@ -12,6 +12,7 @@ export interface SavedApp {
   modelUsed: string
   status: 'success' | 'error'
   errorMessage?: string
+  visibility?: 'public' | 'private'
 }
 
 export interface AppSettings {
@@ -37,6 +38,7 @@ interface AppState {
   saveApp: (app: SavedApp) => void
   deleteApp: (id: string) => void
   getAppById: (id: string) => SavedApp | undefined
+  setAppVisibility: (id: string, visibility: 'public' | 'private') => void
 
   // Generation actions
   startGeneration: (prompt: string) => void
@@ -86,6 +88,14 @@ export const useAppStore = create<AppState>()(
 
       getAppById: (id: string) => {
         return get().apps.find((a) => a.id === id)
+      },
+
+      setAppVisibility: (id: string, visibility: 'public' | 'private') => {
+        set({
+          apps: get().apps.map((a) =>
+            a.id === id ? { ...a, visibility, updatedDate: new Date().toISOString() } : a
+          ),
+        })
       },
 
       startGeneration: (prompt: string) => {

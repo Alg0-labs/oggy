@@ -1,54 +1,21 @@
 import { Tabs } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
-import { Colors } from '../../constants/theme'
+import { GlassBottomBar, type BottomTabConfig } from '../../components/glass-nav/GlassBottomBar'
+
+const TAB_CONFIGS: BottomTabConfig[] = [
+  { icon: 'compass-outline', iconActive: 'compass', label: 'Discover' },
+  { icon: 'person-outline', iconActive: 'person', label: 'Profile' },
+]
 
 export default function TabLayout() {
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textMuted,
-        tabBarStyle: {
-          backgroundColor: Colors.tabBar,
-          borderTopColor: Colors.tabBarBorder,
-          borderTopWidth: 1,
-          height: 88,
-          paddingTop: 8,
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-          letterSpacing: 0.3,
-        },
-      }}
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => (
+        <GlassBottomBar {...props} tabConfigs={TAB_CONFIGS} />
+      )}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'grid' : 'grid-outline'}
-              size={22}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'cog' : 'cog-outline'}
-              size={22}
-              color={color}
-            />
-          ),
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: 'Gallery' }} />
+      <Tabs.Screen name="settings" options={{ title: 'Profile' }} />
     </Tabs>
   )
 }
