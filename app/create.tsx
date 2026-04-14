@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { useGeneration } from '../hooks/useGeneration'
 import { ProviderPill } from '../components/ProviderPill'
 import { PromptInput } from '../components/PromptInput'
 import { GeneratingOverlay } from '../components/GeneratingOverlay'
+import { RefinementBar } from '../components/RefinementBar'
 import { DynamicJSXExecutor } from '../components/DynamicJSXExecutor'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { Colors, Spacing, Radius } from '../constants/theme'
@@ -31,13 +32,20 @@ export default function CreateScreen() {
 
   const settings = useAppStore((s) => s.settings)
   const setSetting = useAppStore((s) => s.setSetting)
-  const { status, generatedJSX, error, generate, save, reset } = useGeneration()
+  const { status, generatedJSX, error, generate, refine, save, reset } = useGeneration()
 
   const [prompt, setPrompt] = useState('')
   const [phase, setPhase] = useState<Phase>('prompt')
-  const [saveName, setSaveName] = useState('')
+  const [lastSuccessfulJSX, setLastSuccessfulJSX] = useState<string | null>(null)
 
   const isGenerating = status === 'generating'
+  const displayJSX = lastSuccessfulJSX
+
+  useEffect(() => {
+    if (status === 'success' && generatedJSX) {
+      setLastSuccessfulJSX(generatedJSX)
+    }
+  }, [status, generatedJSX])
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return
@@ -45,8 +53,13 @@ export default function CreateScreen() {
     setPhase('preview')
   }
 
+  const handleRefine = async (refinementPrompt: string) => {
+    if (!lastSuccessfulJSX) return
+    await refine(lastSuccessfulJSX, refinementPrompt)
+  }
+
   const handleSave = () => {
-    if (!generatedJSX) return
+    if (!lastSuccessfulJSX) return
     Alert.prompt(
       'Save App',
       'Give your app a name',
@@ -71,6 +84,7 @@ export default function CreateScreen() {
   const handleBack = () => {
     if (phase === 'preview') {
       setPhase('prompt')
+      setLastSuccessfulJSX(null)
       reset()
     } else {
       reset()
@@ -80,6 +94,7 @@ export default function CreateScreen() {
 
   const handleRetry = () => {
     setPhase('prompt')
+    setLastSuccessfulJSX(null)
     reset()
   }
 
@@ -93,7 +108,7 @@ export default function CreateScreen() {
         <Text style={styles.headerTitle}>
           {phase === 'prompt' ? 'Create' : 'Preview'}
         </Text>
-        {phase === 'preview' && status === 'success' ? (
+        {phase === 'preview' && displayJSX ? (
           <TouchableOpacity style={styles.saveHeaderBtn} onPress={handleSave} activeOpacity={0.7}>
             <Text style={styles.saveHeaderText}>Save</Text>
           </TouchableOpacity>
@@ -116,10 +131,17 @@ export default function CreateScreen() {
           >
             {/* Provider selector */}
             <Text style={styles.sectionLabel}>Provider</Text>
-            <ProviderPill
-              selected={settings.selectedProvider}
-              onChange={(p) => setSetting('selectedProvider', p)}
-            />
+            {settings.offlineMode ? (
+              <View style={styles.offlinePill}>
+                <Ionicons name="hardware-chip-outline" size={14} color={Colors.primary} />
+                <Text style={styles.offlinePillText}>On-Device (Gemma)</Text>
+              </View>
+            ) : (
+              <ProviderPill
+                selected={settings.selectedProvider}
+                onChange={(p) => setSetting('selectedProvider', p)}
+              />
+            )}
 
             {/* Prompt input */}
             <Text style={[styles.sectionLabel, { marginTop: Spacing.xl }]}>
@@ -154,7 +176,8 @@ export default function CreateScreen() {
         </KeyboardAvoidingView>
       ) : (
         <View style={styles.flex}>
-          {status === 'error' && (
+          {/* Error banner — shows above the last successful preview if one exists */}
+          {status === 'error' && !displayJSX && (
             <View style={styles.errorContainer}>
               <Ionicons name="alert-circle" size={40} color={Colors.error} />
               <Text style={styles.errorTitle}>Generation Failed</Text>
@@ -166,19 +189,35 @@ export default function CreateScreen() {
             </View>
           )}
 
-          {status === 'success' && generatedJSX && (
+          {status === 'error' && displayJSX && (
+            <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle" size={16} color={Colors.error} />
+              <Text style={styles.errorBannerText} numberOfLines={2}>
+                {error}
+              </Text>
+            </View>
+          )}
+
+          {displayJSX && (
             <View style={styles.previewContainer}>
               <ErrorBoundary>
-                <DynamicJSXExecutor code={generatedJSX} />
+                <DynamicJSXExecutor code={displayJSX} />
               </ErrorBoundary>
             </View>
+          )}
+
+          {displayJSX && (
+            <RefinementBar
+              onSubmit={handleRefine}
+              disabled={isGenerating}
+            />
           )}
         </View>
       )}
 
       <GeneratingOverlay
         visible={isGenerating}
-        provider={settings.selectedProvider}
+        provider={settings.offlineMode ? 'offline' : settings.selectedProvider}
       />
     </View>
   )
@@ -298,6 +337,22 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: Spacing.lg,
   },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.errorBg,
+    borderRadius: Radius.sm,
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: 13,
+    color: Colors.error,
+  },
   retryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -310,6 +365,23 @@ const styles = StyleSheet.create({
   },
   retryText: {
     fontSize: 14,
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  offlinePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.primary + '60',
+    backgroundColor: Colors.primaryMuted,
+  },
+  offlinePillText: {
+    fontSize: 13,
     fontWeight: '600',
     color: Colors.primary,
   },

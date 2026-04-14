@@ -24,6 +24,8 @@ export default function RootLayout() {
           name="preview/[id]"
           options={{
             animation: 'slide_from_right',
+            gestureEnabled: true,
+            contentStyle: { backgroundColor: '#FFFFFF' },
           }}
         />
       </Stack>

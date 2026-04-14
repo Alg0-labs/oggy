@@ -1,4 +1,4 @@
-import { LLMService, getSystemPrompt } from './index'
+import { LLMService, getSystemPrompt, getRefineSystemPrompt } from './index'
 import { extractJSXFromMarkdown } from './utils'
 
 export class AnthropicLLMService implements LLMService {
@@ -25,6 +25,34 @@ export class AnthropicLLMService implements LLMService {
         max_tokens: 4096,
         system: getSystemPrompt(),
         messages: [{ role: 'user', content: userPrompt }],
+      }),
+    })
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}))
+      throw new Error(`Anthropic ${response.status}: ${err.error?.message || 'Unknown error'}`)
+    }
+
+    const data = await response.json()
+    const textBlock = data.content?.find((b: any) => b.type === 'text')
+    if (!textBlock?.text) throw new Error('Empty response from Anthropic')
+
+    return extractJSXFromMarkdown(textBlock.text)
+  }
+
+  async refineJSX(currentCode: string, refinementPrompt: string): Promise<string> {
+    const response = await fetch(`${this.baseURL}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: this.model,
+        max_tokens: 4096,
+        system: getRefineSystemPrompt(currentCode),
+        messages: [{ role: 'user', content: refinementPrompt }],
       }),
     })
 

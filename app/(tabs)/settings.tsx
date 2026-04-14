@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Switch,
   Alert,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -13,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons'
 import { useAppStore } from '../../store/appStore'
 import { keychainManager } from '../../services/storage/keychain'
 import { createLLMService } from '../../services/llm/factory'
+import { ModelCard } from '../../components/ModelCard'
+import * as OggyMLX from '../../modules/oggy-mlx'
 import { Colors, Spacing, Radius } from '../../constants/theme'
 
 type Provider = 'openai' | 'google' | 'anthropic'
@@ -23,10 +26,17 @@ const providerConfig: { key: Provider; label: string; icon: string; color: strin
   { key: 'anthropic', label: 'Anthropic Claude', icon: 'diamond', color: Colors.providers.anthropic, placeholder: 'sk-ant-...' },
 ]
 
+const modelConfigs = [
+  { id: OggyMLX.MODEL_IDS.E4B, settingValue: 'e4b' as const, ...OggyMLX.MODEL_INFO[OggyMLX.MODEL_IDS.E4B] },
+  { id: OggyMLX.MODEL_IDS.E8B, settingValue: 'e8b' as const, ...OggyMLX.MODEL_INFO[OggyMLX.MODEL_IDS.E8B] },
+]
+
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets()
   const settings = useAppStore((s) => s.settings)
   const setSetting = useAppStore((s) => s.setSetting)
+  const isOfflineModelDownloaded = useAppStore((s) => s.isOfflineModelDownloaded)
+  const setModelStatus = useAppStore((s) => s.setModelStatus)
 
   const [keys, setKeys] = useState<Record<Provider, string>>({
     openai: '',
@@ -41,9 +51,24 @@ export default function SettingsScreen() {
   const [editing, setEditing] = useState<Provider | null>(null)
   const [testing, setTesting] = useState<Provider | null>(null)
 
+  // Offline model state
+  const [downloadProgress, setDownloadProgress] = useState<Record<string, number>>({})
+  const [isDownloading, setIsDownloading] = useState<Record<string, boolean>>({})
+
+  const nativeAvailable = OggyMLX.isAvailable()
+
   useEffect(() => {
     loadKeys()
+    checkModelStatus()
   }, [])
+
+  useEffect(() => {
+    if (!nativeAvailable) return
+    const sub = OggyMLX.addDownloadProgressListener(({ modelId, progress }) => {
+      setDownloadProgress((prev) => ({ ...prev, [modelId]: progress }))
+    })
+    return () => sub.remove()
+  }, [nativeAvailable])
 
   const loadKeys = async () => {
     const results: Record<Provider, boolean> = { openai: false, google: false, anthropic: false }
@@ -52,6 +77,14 @@ export default function SettingsScreen() {
       results[p.key] = !!key
     }
     setHasKey(results)
+  }
+
+  const checkModelStatus = async () => {
+    if (!nativeAvailable) return
+    for (const m of modelConfigs) {
+      const downloaded = await OggyMLX.isModelDownloaded(m.id)
+      setModelStatus(m.id, downloaded)
+    }
   }
 
   const saveKey = useCallback(async (provider: Provider) => {
@@ -85,6 +118,39 @@ export default function SettingsScreen() {
     }
   }, [])
 
+  const handleDownloadModel = useCallback(async (modelId: string) => {
+    setIsDownloading((prev) => ({ ...prev, [modelId]: true }))
+    setDownloadProgress((prev) => ({ ...prev, [modelId]: 0 }))
+    try {
+      await OggyMLX.downloadModel(modelId)
+      setModelStatus(modelId, true)
+    } catch (err: any) {
+      Alert.alert('Download Failed', err.message || 'Unknown error')
+    } finally {
+      setIsDownloading((prev) => ({ ...prev, [modelId]: false }))
+    }
+  }, [setModelStatus])
+
+  const handleDeleteModel = useCallback(async (modelId: string) => {
+    Alert.alert('Delete Model', 'Remove downloaded model?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await OggyMLX.deleteModel(modelId)
+            setModelStatus(modelId, false)
+          } catch (err: any) {
+            Alert.alert('Error', err.message || 'Failed to delete')
+          }
+        },
+      },
+    ])
+  }, [setModelStatus])
+
+  const offlineDisabled = !nativeAvailable
+
   return (
     <ScrollView
       style={[styles.container, { paddingTop: insets.top }]}
@@ -93,11 +159,58 @@ export default function SettingsScreen() {
     >
       <Text style={styles.title}>Settings</Text>
 
+      {/* On-Device AI */}
+      <Text style={styles.sectionLabel}>On-Device AI</Text>
+      <View style={styles.offlineCard}>
+        <View style={styles.offlineHeader}>
+          <View style={styles.offlineLeft}>
+            <Ionicons name="hardware-chip-outline" size={20} color={Colors.accent} />
+            <Text style={styles.offlineName}>Offline Mode</Text>
+          </View>
+          <Switch
+            value={settings.offlineMode}
+            onValueChange={(v) => setSetting('offlineMode', v)}
+            disabled={offlineDisabled}
+            trackColor={{ false: Colors.border, true: Colors.accent + '60' }}
+            thumbColor={settings.offlineMode ? Colors.accent : Colors.textMuted}
+          />
+        </View>
+        {offlineDisabled && (
+          <Text style={styles.offlineHint}>
+            Requires a development build. Run: npx expo run:ios
+          </Text>
+        )}
+        {!offlineDisabled && (
+          <Text style={styles.offlineHint}>
+            Run models locally on your device. No internet required.
+          </Text>
+        )}
+      </View>
+
+      {!offlineDisabled && (
+        <>
+          {modelConfigs.map((m) => (
+            <ModelCard
+              key={m.id}
+              name={m.name}
+              size={m.size}
+              isDownloaded={!!isOfflineModelDownloaded[m.id]}
+              isDownloading={!!isDownloading[m.id]}
+              downloadProgress={downloadProgress[m.id] || 0}
+              isSelected={settings.selectedModel === m.settingValue}
+              onSelect={() => setSetting('selectedModel', m.settingValue)}
+              onDownload={() => handleDownloadModel(m.id)}
+              onDelete={() => handleDeleteModel(m.id)}
+            />
+          ))}
+        </>
+      )}
+
       {/* Active Provider */}
       <Text style={styles.sectionLabel}>Active Provider</Text>
-      <View style={styles.providerRow}>
+      <View style={[styles.providerRow, settings.offlineMode && styles.dimmed]}>
         {providerConfig.map((p) => {
-          const active = settings.selectedProvider === p.key
+          const active = settings.selectedProvider === p.key && !settings.offlineMode
           return (
             <TouchableOpacity
               key={p.key}
@@ -105,8 +218,8 @@ export default function SettingsScreen() {
                 styles.providerChip,
                 active && { backgroundColor: p.color + '20', borderColor: p.color + '60' },
               ]}
-              onPress={() => setSetting('selectedProvider', p.key)}
-              activeOpacity={0.7}
+              onPress={() => !settings.offlineMode && setSetting('selectedProvider', p.key)}
+              activeOpacity={settings.offlineMode ? 1 : 0.7}
             >
               <Ionicons
                 name={p.icon as any}
@@ -123,76 +236,81 @@ export default function SettingsScreen() {
           )
         })}
       </View>
+      {settings.offlineMode && (
+        <Text style={styles.dimmedHint}>Disabled while offline mode is on</Text>
+      )}
 
       {/* API Keys */}
-      <Text style={styles.sectionLabel}>API Keys</Text>
-      {providerConfig.map((p) => (
-        <View key={p.key} style={styles.keyCard}>
-          <View style={styles.keyHeader}>
-            <View style={styles.keyLeft}>
-              <View style={[styles.keyDot, { backgroundColor: p.color }]}>
-                <Ionicons name={p.icon as any} size={14} color="#FFF" />
+      <View style={settings.offlineMode ? styles.dimmed : undefined}>
+        <Text style={styles.sectionLabel}>API Keys</Text>
+        {providerConfig.map((p) => (
+          <View key={p.key} style={styles.keyCard}>
+            <View style={styles.keyHeader}>
+              <View style={styles.keyLeft}>
+                <View style={[styles.keyDot, { backgroundColor: p.color }]}>
+                  <Ionicons name={p.icon as any} size={14} color="#FFF" />
+                </View>
+                <Text style={styles.keyName}>{p.label}</Text>
               </View>
-              <Text style={styles.keyName}>{p.label}</Text>
-            </View>
-            <View style={styles.keyRight}>
-              {hasKey[p.key] && (
-                <TouchableOpacity
-                  style={styles.testBtn}
-                  onPress={() => testKey(p.key)}
-                  disabled={testing === p.key}
-                >
-                  <Text style={[styles.testText, testing === p.key && { opacity: 0.5 }]}>
-                    {testing === p.key ? 'Testing...' : 'Test'}
+              <View style={styles.keyRight}>
+                {hasKey[p.key] && !settings.offlineMode && (
+                  <TouchableOpacity
+                    style={styles.testBtn}
+                    onPress={() => testKey(p.key)}
+                    disabled={testing === p.key}
+                  >
+                    <Text style={[styles.testText, testing === p.key && { opacity: 0.5 }]}>
+                      {testing === p.key ? 'Testing...' : 'Test'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                <View style={[styles.statusBadge, hasKey[p.key] ? styles.statusOk : styles.statusMissing]}>
+                  <Text style={[styles.statusText, hasKey[p.key] ? styles.statusTextOk : styles.statusTextMissing]}>
+                    {hasKey[p.key] ? 'Set' : 'Missing'}
                   </Text>
-                </TouchableOpacity>
-              )}
-              <View style={[styles.statusBadge, hasKey[p.key] ? styles.statusOk : styles.statusMissing]}>
-                <Text style={[styles.statusText, hasKey[p.key] ? styles.statusTextOk : styles.statusTextMissing]}>
-                  {hasKey[p.key] ? 'Set' : 'Missing'}
-                </Text>
+                </View>
               </View>
             </View>
-          </View>
 
-          {editing === p.key ? (
-            <View style={styles.inputRow}>
-              <TextInput
-                style={styles.keyInput}
-                placeholder={p.placeholder}
-                placeholderTextColor={Colors.textMuted}
-                value={keys[p.key]}
-                onChangeText={(text) => setKeys((prev) => ({ ...prev, [p.key]: text }))}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <TouchableOpacity style={styles.saveBtn} onPress={() => saveKey(p.key)}>
-                <Ionicons name="checkmark" size={18} color="#FFF" />
-              </TouchableOpacity>
+            {!settings.offlineMode && editing === p.key ? (
+              <View style={styles.inputRow}>
+                <TextInput
+                  style={styles.keyInput}
+                  placeholder={p.placeholder}
+                  placeholderTextColor={Colors.textMuted}
+                  value={keys[p.key]}
+                  onChangeText={(text) => setKeys((prev) => ({ ...prev, [p.key]: text }))}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <TouchableOpacity style={styles.saveBtn} onPress={() => saveKey(p.key)}>
+                  <Ionicons name="checkmark" size={18} color="#FFF" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => {
+                    setEditing(null)
+                    setKeys((prev) => ({ ...prev, [p.key]: '' }))
+                  }}
+                >
+                  <Ionicons name="close" size={18} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            ) : !settings.offlineMode ? (
               <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => {
-                  setEditing(null)
-                  setKeys((prev) => ({ ...prev, [p.key]: '' }))
-                }}
+                style={styles.editRow}
+                onPress={() => setEditing(p.key)}
               >
-                <Ionicons name="close" size={18} color={Colors.textSecondary} />
+                <Text style={styles.editText}>
+                  {hasKey[p.key] ? 'Update key' : 'Add key'}
+                </Text>
+                <Ionicons name="chevron-forward" size={14} color={Colors.textMuted} />
               </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={styles.editRow}
-              onPress={() => setEditing(p.key)}
-            >
-              <Text style={styles.editText}>
-                {hasKey[p.key] ? 'Update key' : 'Add key'}
-              </Text>
-              <Ionicons name="chevron-forward" size={14} color={Colors.textMuted} />
-            </TouchableOpacity>
-          )}
-        </View>
-      ))}
+            ) : null}
+          </View>
+        ))}
+      </View>
 
       {/* About */}
       <Text style={styles.sectionLabel}>About</Text>
@@ -201,7 +319,7 @@ export default function SettingsScreen() {
         <Text style={styles.aboutText}>
           Describe any app in natural language and watch it come to life on your phone.
         </Text>
-        <Text style={styles.aboutVersion}>v0.1.0</Text>
+        <Text style={styles.aboutVersion}>v0.2.0</Text>
       </View>
     </ScrollView>
   )
@@ -233,6 +351,36 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     marginTop: Spacing.lg,
   },
+  // Offline
+  offlineCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: Spacing.sm,
+  },
+  offlineHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  offlineLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  offlineName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.text,
+  },
+  offlineHint: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginTop: Spacing.sm,
+  },
+  // Providers
   providerRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
@@ -254,6 +402,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.textMuted,
   },
+  dimmed: {
+    opacity: 0.4,
+  },
+  dimmedHint: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginTop: Spacing.xs,
+    fontStyle: 'italic',
+  },
+  // Keys
   keyCard: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
@@ -366,6 +524,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textSecondary,
   },
+  // About
   aboutCard: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,

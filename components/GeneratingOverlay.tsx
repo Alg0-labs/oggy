@@ -17,6 +17,7 @@ const providerLabels: Record<string, string> = {
   openai: 'OpenAI',
   google: 'Gemini',
   anthropic: 'Claude',
+  offline: 'Gemma (On-Device)',
 }
 
 export function GeneratingOverlay({ visible, provider }: GeneratingOverlayProps) {
