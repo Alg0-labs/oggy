@@ -6,7 +6,7 @@ import {
   Animated,
   Easing,
 } from 'react-native'
-import { Colors, Radius, Spacing } from '../constants/theme'
+import { Colors, Radius, Spacing, Type } from '../constants/theme'
 
 interface GeneratingOverlayProps {
   visible: boolean
@@ -22,7 +22,7 @@ const providerLabels: Record<string, string> = {
 
 export function GeneratingOverlay({ visible, provider }: GeneratingOverlayProps) {
   const spin = useRef(new Animated.Value(0)).current
-  const pulse = useRef(new Animated.Value(0.6)).current
+  const pulse = useRef(new Animated.Value(0.65)).current
 
   useEffect(() => {
     if (!visible) return
@@ -40,13 +40,13 @@ export function GeneratingOverlay({ visible, provider }: GeneratingOverlayProps)
       Animated.sequence([
         Animated.timing(pulse, {
           toValue: 1,
-          duration: 800,
+          duration: 900,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(pulse, {
-          toValue: 0.6,
-          duration: 800,
+          toValue: 0.65,
+          duration: 900,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
@@ -73,20 +73,22 @@ export function GeneratingOverlay({ visible, provider }: GeneratingOverlayProps)
     <View style={styles.overlay}>
       <View style={styles.content}>
         <Animated.View
-          style={[
-            styles.spinner,
-            { transform: [{ rotate: rotation }] },
-          ]}
+          style={[styles.spinner, { transform: [{ rotate: rotation }] }]}
         >
           <View style={styles.spinnerArc} />
         </Animated.View>
 
         <Animated.Text style={[styles.title, { opacity: pulse }]}>
-          Generating...
+          Generating
         </Animated.Text>
         <Text style={styles.subtitle}>
           {providerLabels[provider] || provider} is building your app
         </Text>
+
+        <View style={styles.badge}>
+          <View style={styles.dot} />
+          <Text style={styles.badgeText}>Live</Text>
+        </View>
       </View>
     </View>
   )
@@ -95,7 +97,7 @@ export function GeneratingOverlay({ visible, provider }: GeneratingOverlayProps)
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10, 10, 15, 0.92)',
+    backgroundColor: Colors.bgDark,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 100,
@@ -106,25 +108,48 @@ const styles = StyleSheet.create({
   spinner: {
     width: 56,
     height: 56,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
   },
   spinnerArc: {
     width: 56,
     height: 56,
     borderRadius: 28,
     borderWidth: 3,
-    borderColor: Colors.border,
-    borderTopColor: Colors.primary,
-    borderRightColor: Colors.primary,
+    borderColor: 'rgba(244, 244, 244, 0.2)',
+    borderTopColor: Colors.textInverse,
+    borderRightColor: Colors.textInverse,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: Spacing.xs,
+    ...Type.display,
+    color: Colors.textInverse,
+    fontSize: 40,
+    lineHeight: 44,
+    marginBottom: Spacing.sm,
   },
   subtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
+    ...Type.body,
+    color: 'rgba(244, 244, 244, 0.65)',
+    marginBottom: Spacing.xl,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.ghostOnDark,
+    borderWidth: 2,
+    borderColor: 'rgba(244, 244, 244, 0.3)',
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.teal,
+  },
+  badgeText: {
+    ...Type.micro,
+    color: Colors.textInverse,
   },
 })

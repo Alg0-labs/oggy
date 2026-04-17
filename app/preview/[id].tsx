@@ -25,6 +25,7 @@ export default function PreviewScreen() {
   const saveApp = useAppStore((s) => s.saveApp)
   const deleteApp = useAppStore((s) => s.deleteApp)
   const settings = useAppStore((s) => s.settings)
+  const setAppVisibility = useAppStore((s) => s.setAppVisibility)
 
   const [toolbarVisible, setToolbarVisible] = useState(false)
   const [showRefinement, setShowRefinement] = useState(false)
@@ -122,6 +123,17 @@ export default function PreviewScreen() {
         onBack={() => router.back()}
         onRefine={handleToggleRefine}
         onDelete={handleDelete}
+        visibility={app.visibility ?? 'private'}
+        onToggleVisibility={() => {
+          const next = app.visibility === 'public' ? 'private' : 'public'
+          setAppVisibility(app.id, next)
+          Alert.alert(
+            next === 'public' ? 'Published' : 'Made private',
+            next === 'public'
+              ? `"${app.name}" is now visible in the public gallery.`
+              : `"${app.name}" is now only visible to you.`
+          )
+        }}
       />
 
       {showRefinement && (

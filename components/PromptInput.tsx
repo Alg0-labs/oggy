@@ -6,7 +6,7 @@ import {
   StyleSheet,
   TextInputProps,
 } from 'react-native'
-import { Colors, Radius, Spacing } from '../constants/theme'
+import { Colors, Radius, Spacing, Type } from '../constants/theme'
 
 interface PromptInputProps extends TextInputProps {
   label?: string
@@ -37,22 +37,18 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginBottom: Spacing.sm,
+    ...Type.micro,
+    color: Colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    marginBottom: Spacing.sm,
   },
   input: {
-    backgroundColor: Colors.surfaceElevated,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    backgroundColor: Colors.surfaceMuted,
+    borderRadius: Radius.lg,
     padding: Spacing.md,
-    fontSize: 16,
+    paddingVertical: Spacing.md,
+    ...Type.bodyLarge,
     color: Colors.text,
-    minHeight: 120,
-    lineHeight: 24,
+    minHeight: 140,
   },
 })

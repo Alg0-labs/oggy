@@ -3,35 +3,49 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
 } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
-import { Colors, Radius, Spacing } from '../constants/theme'
+import { IconButton } from './ui'
+import { Colors, Radius, Spacing, Type } from '../constants/theme'
 
 interface FloatingToolbarProps {
   title?: string
   onBack: () => void
   onDelete?: () => void
+  visibility?: 'public' | 'private'
+  onToggleVisibility?: () => void
 }
 
-export function FloatingToolbar({ title, onBack, onDelete }: FloatingToolbarProps) {
+export function FloatingToolbar({
+  title,
+  onBack,
+  onDelete,
+  visibility,
+  onToggleVisibility,
+}: FloatingToolbarProps) {
+  const isPublic = visibility === 'public'
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.button} onPress={onBack} activeOpacity={0.7}>
-        <Ionicons name="chevron-back" size={20} color={Colors.text} />
-      </TouchableOpacity>
+      <IconButton icon="chevron-back" size="lg" variant="inverse" onPress={onBack} />
 
       {title && (
-        <Text style={styles.title} numberOfLines={1}>
-          {title}
-        </Text>
+        <View style={styles.titleWrap}>
+          <Text style={styles.title} numberOfLines={1}>
+            {title}
+          </Text>
+        </View>
       )}
 
       <View style={styles.right}>
+        {onToggleVisibility && (
+          <IconButton
+            icon={isPublic ? 'globe-outline' : 'lock-closed'}
+            size="lg"
+            variant="inverse"
+            onPress={onToggleVisibility}
+          />
+        )}
         {onDelete && (
-          <TouchableOpacity style={styles.button} onPress={onDelete} activeOpacity={0.7}>
-            <Ionicons name="trash-outline" size={18} color={Colors.error} />
-          </TouchableOpacity>
+          <IconButton icon="trash-outline" size="lg" variant="inverse" onPress={onDelete} />
         )}
       </View>
     </View>
@@ -41,35 +55,26 @@ export function FloatingToolbar({ title, onBack, onDelete }: FloatingToolbarProp
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
+    top: 54,
+    left: Spacing.md,
+    right: Spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 54,
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.sm,
-    backgroundColor: 'rgba(10, 10, 15, 0.85)',
+    gap: Spacing.sm,
     zIndex: 50,
   },
-  button: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.surfaceElevated,
+  titleWrap: {
+    flex: 1,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.primary,
     alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   title: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.text,
-    textAlign: 'center',
-    marginHorizontal: Spacing.sm,
+    ...Type.buttonSmall,
+    color: Colors.textInverse,
   },
   right: {
     flexDirection: 'row',

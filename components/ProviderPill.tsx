@@ -1,14 +1,14 @@
 import React from 'react'
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
-import { Colors, Radius, Spacing } from '../constants/theme'
+import { View, StyleSheet } from 'react-native'
+import { PillButton } from './ui'
+import { Spacing } from '../constants/theme'
 
 type Provider = 'openai' | 'google' | 'anthropic'
 
-const providers: { key: Provider; label: string; icon: string; color: string }[] = [
-  { key: 'openai', label: 'OpenAI', icon: 'flash', color: Colors.providers.openai },
-  { key: 'google', label: 'Gemini', icon: 'sparkles', color: Colors.providers.google },
-  { key: 'anthropic', label: 'Claude', icon: 'diamond', color: Colors.providers.anthropic },
+const providers: { key: Provider; label: string; icon: string }[] = [
+  { key: 'openai', label: 'OpenAI', icon: 'flash' },
+  { key: 'google', label: 'Gemini', icon: 'sparkles' },
+  { key: 'anthropic', label: 'Claude', icon: 'diamond' },
 ]
 
 interface ProviderPillProps {
@@ -19,34 +19,17 @@ interface ProviderPillProps {
 export function ProviderPill({ selected, onChange }: ProviderPillProps) {
   return (
     <View style={styles.container}>
-      {providers.map((p) => {
-        const active = selected === p.key
-        return (
-          <TouchableOpacity
-            key={p.key}
-            style={[
-              styles.pill,
-              active && { backgroundColor: p.color + '20', borderColor: p.color + '60' },
-            ]}
-            onPress={() => onChange(p.key)}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={p.icon as any}
-              size={14}
-              color={active ? p.color : Colors.textMuted}
-            />
-            <Text
-              style={[
-                styles.label,
-                active && { color: p.color },
-              ]}
-            >
-              {p.label}
-            </Text>
-          </TouchableOpacity>
-        )
-      })}
+      {providers.map((p) => (
+        <PillButton
+          key={p.key}
+          label={p.label}
+          icon={p.icon as any}
+          variant="outline"
+          size="md"
+          active={selected === p.key}
+          onPress={() => onChange(p.key)}
+        />
+      ))}
     </View>
   )
 }
@@ -55,21 +38,6 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     gap: Spacing.sm,
-  },
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surfaceElevated,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textMuted,
+    flexWrap: 'wrap',
   },
 })
