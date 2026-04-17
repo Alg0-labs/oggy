@@ -19,6 +19,7 @@ import { StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { Colors } from "../constants/theme";
+import { sweepOrphanedGeneratingMessages } from "../services/llm/generationManager";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -40,6 +41,11 @@ export default function RootLayout() {
   useEffect(() => {
     if (ready) SplashScreen.hideAsync().catch(() => {});
   }, [ready]);
+
+  // Clean up any messages stuck in 'generating' from a killed previous session.
+  useEffect(() => {
+    sweepOrphanedGeneratingMessages();
+  }, []);
 
   if (!ready) {
     return <View style={{ flex: 1, backgroundColor: Colors.bg }} />;

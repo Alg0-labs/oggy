@@ -83,32 +83,9 @@ class JSXValidator {
       }
     }
 
-    // Check for unbalanced braces
-    const braceCount = {
-      '{': (code.match(/{/g) || []).length,
-      '}': (code.match(/}/g) || []).length,
-    }
-    if (braceCount['{'] !== braceCount['}']) {
-      errors.push('Unbalanced braces in code')
-    }
-
-    // Check for unbalanced parentheses
-    const parenCount = {
-      '(': (code.match(/\(/g) || []).length,
-      ')': (code.match(/\)/g) || []).length,
-    }
-    if (parenCount['('] !== parenCount[')']) {
-      errors.push('Unbalanced parentheses in code')
-    }
-
-    // Check for unbalanced brackets
-    const bracketCount = {
-      '[': (code.match(/\[/g) || []).length,
-      ']': (code.match(/]/g) || []).length,
-    }
-    if (bracketCount['['] !== bracketCount[']']) {
-      errors.push('Unbalanced brackets in code')
-    }
+    // Note: brace/paren balance checks are intentionally omitted here.
+    // They produce false positives on string literals and template expressions.
+    // Real syntax errors are caught by the Babel transform step instead.
 
     // Try to detect JSX syntax errors (basic check)
     if (!code.includes('return') && !code.includes('React.createElement')) {

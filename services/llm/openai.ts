@@ -12,9 +12,10 @@ export class OpenAILLMService implements LLMService {
     if (model) this.model = model
   }
 
-  async generateJSX(userPrompt: string): Promise<string> {
+  async generateJSX(userPrompt: string, signal?: AbortSignal): Promise<string> {
     const response = await fetch(`${this.baseURL}/chat/completions`, {
       method: 'POST',
+      signal,
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${this.apiKey}`,
@@ -26,7 +27,7 @@ export class OpenAILLMService implements LLMService {
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.7,
-        max_tokens: 4096,
+        max_tokens: 16384,
       }),
     })
 
@@ -42,9 +43,10 @@ export class OpenAILLMService implements LLMService {
     return extractJSXFromMarkdown(content)
   }
 
-  async refineJSX(currentCode: string, refinementPrompt: string): Promise<string> {
+  async refineJSX(currentCode: string, refinementPrompt: string, signal?: AbortSignal): Promise<string> {
     const response = await fetch(`${this.baseURL}/chat/completions`, {
       method: 'POST',
+      signal,
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${this.apiKey}`,
@@ -56,7 +58,7 @@ export class OpenAILLMService implements LLMService {
           { role: 'user', content: refinementPrompt },
         ],
         temperature: 0.7,
-        max_tokens: 4096,
+        max_tokens: 16384,
       }),
     })
 

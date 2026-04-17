@@ -15,6 +15,9 @@ interface ImmersiveToolbarProps {
   onBack: () => void
   onRefine?: () => void
   onDelete?: () => void
+  refineActive?: boolean
+  visibility?: 'public' | 'private'
+  onToggleVisibility?: () => void
 }
 
 export function ImmersiveToolbar({
@@ -23,6 +26,9 @@ export function ImmersiveToolbar({
   onBack,
   onRefine,
   onDelete,
+  refineActive,
+  visibility,
+  onToggleVisibility,
 }: ImmersiveToolbarProps) {
   const opacity = useRef(new Animated.Value(0)).current
   const translateY = useRef(new Animated.Value(-20)).current
@@ -64,9 +70,26 @@ export function ImmersiveToolbar({
       )}
 
       <View style={styles.actions}>
+        {onToggleVisibility && (
+          <TouchableOpacity style={styles.button} onPress={onToggleVisibility} activeOpacity={0.7}>
+            <Ionicons
+              name={visibility === 'public' ? 'globe-outline' : 'lock-closed-outline'}
+              size={18}
+              color={Colors.text}
+            />
+          </TouchableOpacity>
+        )}
         {onRefine && (
-          <TouchableOpacity style={styles.button} onPress={onRefine} activeOpacity={0.7}>
-            <Ionicons name="brush-outline" size={18} color={Colors.primary} />
+          <TouchableOpacity
+            style={[styles.button, refineActive && styles.buttonActive]}
+            onPress={onRefine}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="chatbubble-ellipses-outline"
+              size={18}
+              color={refineActive ? Colors.textInverse : Colors.primary}
+            />
           </TouchableOpacity>
         )}
         {onDelete && (
@@ -103,6 +126,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(42, 42, 56, 0.8)',
+  },
+  buttonActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   title: {
     flex: 1,

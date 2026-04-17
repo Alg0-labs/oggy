@@ -1,13 +1,15 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  Animated,
+  Easing,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { SavedApp } from '../store/appStore'
+import { SavedApp, isAppGenerating } from '../store/appStore'
 import { Colors, Radius, Spacing, Type } from '../constants/theme'
 
 const CARD_GAP = Spacing.md
@@ -28,10 +30,38 @@ interface AppCardProps {
 export function AppCard({ app, onPress, onLongPress }: AppCardProps) {
   const provider = providerMeta[app.modelUsed] || providerMeta.openai
   const date = new Date(app.createdDate)
-  const dateStr = date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  })
+  const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+
+  const generating = isAppGenerating(app)
+  const firstUserMsg = app.messages.find((m) => m.role === 'user')
+  const promptPreview = firstUserMsg?.content || ''
+  const hasError =
+    !generating &&
+    app.messages.some((m) => m.status === 'error' || m.status === 'cancelled') &&
+    !app.currentJSX
+
+  const pulse = useRef(new Animated.Value(0.4)).current
+  useEffect(() => {
+    if (!generating) return
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 750,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0.4,
+          duration: 750,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    )
+    anim.start()
+    return () => anim.stop()
+  }, [generating, pulse])
 
   return (
     <TouchableOpacity
@@ -46,7 +76,13 @@ export function AppCard({ app, onPress, onLongPress }: AppCardProps) {
           <Text style={styles.providerLabel}>{provider.label}</Text>
         </View>
         <View style={styles.topRight}>
-          {app.status === 'error' && (
+          {generating && (
+            <View style={styles.genPill}>
+              <Animated.View style={[styles.genDot, { opacity: pulse }]} />
+              <Text style={styles.genLabel}>Generating</Text>
+            </View>
+          )}
+          {hasError && !generating && (
             <Ionicons name="alert-circle" size={16} color={Colors.danger} />
           )}
           <View
@@ -69,7 +105,7 @@ export function AppCard({ app, onPress, onLongPress }: AppCardProps) {
           {app.name}
         </Text>
         <Text style={styles.prompt} numberOfLines={3}>
-          {app.prompt}
+          {promptPreview}
         </Text>
       </View>
 
@@ -117,6 +153,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  genPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.bg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  genDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.primary,
+  },
+  genLabel: {
+    ...Type.micro,
+    color: Colors.text,
+    fontSize: 10,
   },
   visibilityPill: {
     width: 22,

@@ -12,9 +12,10 @@ export class AnthropicLLMService implements LLMService {
     if (model) this.model = model
   }
 
-  async generateJSX(userPrompt: string): Promise<string> {
+  async generateJSX(userPrompt: string, signal?: AbortSignal): Promise<string> {
     const response = await fetch(`${this.baseURL}/messages`, {
       method: 'POST',
+      signal,
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': this.apiKey,
@@ -22,7 +23,7 @@ export class AnthropicLLMService implements LLMService {
       },
       body: JSON.stringify({
         model: this.model,
-        max_tokens: 4096,
+        max_tokens: 16384,
         system: getSystemPrompt(),
         messages: [{ role: 'user', content: userPrompt }],
       }),
@@ -40,9 +41,10 @@ export class AnthropicLLMService implements LLMService {
     return extractJSXFromMarkdown(textBlock.text)
   }
 
-  async refineJSX(currentCode: string, refinementPrompt: string): Promise<string> {
+  async refineJSX(currentCode: string, refinementPrompt: string, signal?: AbortSignal): Promise<string> {
     const response = await fetch(`${this.baseURL}/messages`, {
       method: 'POST',
+      signal,
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': this.apiKey,
@@ -50,7 +52,7 @@ export class AnthropicLLMService implements LLMService {
       },
       body: JSON.stringify({
         model: this.model,
-        max_tokens: 4096,
+        max_tokens: 16384,
         system: getRefineSystemPrompt(currentCode),
         messages: [{ role: 'user', content: refinementPrompt }],
       }),

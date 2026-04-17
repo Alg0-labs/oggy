@@ -1,74 +1,66 @@
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   View,
+  Text,
   StyleSheet,
   Alert,
   TouchableOpacity,
-  Animated,
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
-import { useAppStore, SavedApp } from '../../store/appStore'
-import { keychainManager } from '../../services/storage/keychain'
-import { createLLMService } from '../../services/llm/factory'
+import { useAppStore } from '../../store/appStore'
+import { useAppChat } from '../../hooks/useGeneration'
 import { DynamicJSXExecutor } from '../../components/DynamicJSXExecutor'
 import { ErrorBoundary } from '../../components/ErrorBoundary'
 import { ImmersiveToolbar } from '../../components/ImmersiveToolbar'
-import { RefinementBar } from '../../components/RefinementBar'
-import { GeneratingOverlay } from '../../components/GeneratingOverlay'
-import { Colors, Spacing } from '../../constants/theme'
+import { ChatPanel } from '../../components/ChatPanel'
+import { GeneratingMessage } from '../../components/GeneratingMessage'
+import { Colors, Radius, Spacing, Type } from '../../constants/theme'
 
 export default function PreviewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
-  const app = useAppStore((s) => s.apps.find((a) => a.id === id))
-  const saveApp = useAppStore((s) => s.saveApp)
   const deleteApp = useAppStore((s) => s.deleteApp)
-  const settings = useAppStore((s) => s.settings)
   const setAppVisibility = useAppStore((s) => s.setAppVisibility)
+  const { app, messages, currentJSX, generating, pending, send, cancel } = useAppChat(id)
 
   const [toolbarVisible, setToolbarVisible] = useState(false)
-  const [showRefinement, setShowRefinement] = useState(false)
-  const [isRefining, setIsRefining] = useState(false)
-  const [refineError, setRefineError] = useState<string | null>(null)
+  // Chat auto-opens when there's no JSX yet (first generation) — it's the only content to show.
+  const [chatOpen, setChatOpen] = useState<boolean>(!currentJSX)
+  const [shownJsx, setShownJsx] = useState<string | null>(currentJSX)
+  const [shownMsgId, setShownMsgId] = useState<string | undefined>(undefined)
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Track the latest success message → shownJsx defaults to latest.
+  useEffect(() => {
+    if (!currentJSX) {
+      setShownJsx(null)
+      setShownMsgId(undefined)
+      return
+    }
+    // Only auto-advance if user hasn't explicitly pinned an older version.
+    const latestSuccess = [...(messages || [])]
+      .reverse()
+      .find((m) => m.role === 'assistant' && m.status === 'success' && m.jsx)
+    if (!shownMsgId || shownMsgId === latestSuccess?.id) {
+      setShownJsx(currentJSX)
+      setShownMsgId(latestSuccess?.id)
+    }
+  }, [currentJSX, messages, shownMsgId])
+
+  // Auto-open chat when generation starts mid-session.
+  useEffect(() => {
+    if (generating) setChatOpen(true)
+  }, [generating])
 
   const toggleToolbar = useCallback(() => {
     setToolbarVisible((v) => {
       const next = !v
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
-      if (next) {
-        hideTimerRef.current = setTimeout(() => setToolbarVisible(false), 3000)
-      }
+      if (next) hideTimerRef.current = setTimeout(() => setToolbarVisible(false), 3000)
       return next
     })
   }, [])
-
-  const handleRefine = useCallback(
-    async (refinementPrompt: string) => {
-      if (!app) return
-      setIsRefining(true)
-      setRefineError(null)
-      try {
-        const apiKey = await keychainManager.retrieveAPIKey(settings.selectedProvider)
-        if (!apiKey) throw new Error(`No API key for ${settings.selectedProvider}`)
-        const llm = createLLMService(settings.selectedProvider, apiKey)
-        const newJSX = await llm.refineJSX(app.generatedJSX, refinementPrompt)
-        saveApp({
-          ...app,
-          generatedJSX: newJSX,
-          updatedDate: new Date().toISOString(),
-        })
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Refinement failed'
-        setRefineError(msg)
-        Alert.alert('Refinement Failed', msg)
-      } finally {
-        setIsRefining(false)
-      }
-    },
-    [app, settings.selectedProvider, saveApp]
-  )
 
   const handleDelete = useCallback(() => {
     if (!app) return
@@ -85,10 +77,11 @@ export default function PreviewScreen() {
     ])
   }, [app, deleteApp, router])
 
-  const handleToggleRefine = useCallback(() => {
-    setShowRefinement((v) => !v)
-    if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
-  }, [])
+  const handleToggleVisibility = useCallback(() => {
+    if (!app) return
+    const next = app.visibility === 'public' ? 'private' : 'public'
+    setAppVisibility(app.id, next)
+  }, [app, setAppVisibility])
 
   if (!app) {
     return (
@@ -98,16 +91,34 @@ export default function PreviewScreen() {
     )
   }
 
+  const firstGeneration = !currentJSX && generating
+
   return (
     <View style={styles.container}>
+      {/* Preview surface — or empty-state placeholder while first generating */}
       <View style={styles.executor}>
-        <ErrorBoundary>
-          <DynamicJSXExecutor code={app.generatedJSX} />
-        </ErrorBoundary>
+        {shownJsx ? (
+          <ErrorBoundary key={shownMsgId || 'current'}>
+            <DynamicJSXExecutor code={shownJsx} />
+          </ErrorBoundary>
+        ) : (
+          <View style={styles.placeholder}>
+            {firstGeneration && pending ? (
+              <GeneratingMessage message={pending} onCancel={cancel} />
+            ) : (
+              <>
+                <Text style={styles.placeholderTitle}>No preview yet</Text>
+                <Text style={styles.placeholderText}>
+                  Send a prompt below to generate this app.
+                </Text>
+              </>
+            )}
+          </View>
+        )}
       </View>
 
-      {/* Pill toggle — always visible */}
-      {!showRefinement && (
+      {/* Pill toggle — only shown when the chat isn't open, to avoid overlap */}
+      {!chatOpen && !toolbarVisible && (
         <TouchableOpacity
           style={styles.pullTab}
           onPress={toggleToolbar}
@@ -121,33 +132,33 @@ export default function PreviewScreen() {
         visible={toolbarVisible}
         title={app.name}
         onBack={() => router.back()}
-        onRefine={handleToggleRefine}
+        onRefine={() => setChatOpen((v) => !v)}
+        refineActive={chatOpen}
         onDelete={handleDelete}
         visibility={app.visibility ?? 'private'}
-        onToggleVisibility={() => {
-          const next = app.visibility === 'public' ? 'private' : 'public'
-          setAppVisibility(app.id, next)
-          Alert.alert(
-            next === 'public' ? 'Published' : 'Made private',
-            next === 'public'
-              ? `"${app.name}" is now visible in the public gallery.`
-              : `"${app.name}" is now only visible to you.`
-          )
-        }}
+        onToggleVisibility={handleToggleVisibility}
       />
 
-      {showRefinement && (
-        <RefinementBar
-          onSubmit={handleRefine}
-          disabled={isRefining}
+      {chatOpen && (
+        <ChatPanel
+          messages={messages}
+          onSend={send}
+          onCancel={cancel}
+          generating={generating}
+          activeJsxMessageId={shownMsgId}
+          title={app.name}
+          onBack={() => router.back()}
+          onClose={() => setChatOpen(false)}
+          onMessagePress={(m) => {
+            if (m.jsx) {
+              setShownJsx(m.jsx)
+              setShownMsgId(m.id)
+            }
+          }}
         />
       )}
 
-      <GeneratingOverlay
-        visible={isRefining}
-        provider={settings.selectedProvider}
-      />
-      <StatusBar hidden={!toolbarVisible && !showRefinement} />
+      <StatusBar hidden={!toolbarVisible && !chatOpen} />
     </View>
   )
 }
@@ -159,6 +170,23 @@ const styles = StyleSheet.create({
   },
   executor: {
     flex: 1,
+  },
+  placeholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.xl,
+    gap: Spacing.sm,
+  },
+  placeholderTitle: {
+    ...Type.heading3,
+    color: Colors.text,
+  },
+  placeholderText: {
+    ...Type.body,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    maxWidth: 280,
   },
   pullTab: {
     position: 'absolute',
