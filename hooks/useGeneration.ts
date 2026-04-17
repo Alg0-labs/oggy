@@ -2,11 +2,6 @@ import { useCallback } from 'react'
 import { useAppStore, SavedApp } from '../store/appStore'
 import { keychainManager } from '../services/storage/keychain'
 import { createLLMService } from '../services/llm/factory'
-import { MODEL_IDS } from '../modules/oggy-mlx'
-
-function getModelIdForSetting(selectedModel: 'e4b' | 'e8b'): string {
-  return selectedModel === 'e4b' ? MODEL_IDS.E4B : MODEL_IDS.E8B
-}
 
 export function useGeneration() {
   const generation = useAppStore((s) => s.generation)
@@ -18,17 +13,13 @@ export function useGeneration() {
   const saveApp = useAppStore((s) => s.saveApp)
 
   const getLLMService = useCallback(async () => {
-    if (settings.offlineMode) {
-      const modelId = getModelIdForSetting(settings.selectedModel)
-      return createLLMService('offline', '', modelId)
-    }
     const provider = settings.selectedProvider
     const apiKey = await keychainManager.retrieveAPIKey(provider)
     if (!apiKey) {
       throw new Error(`No API key found for ${provider}. Add one in Settings.`)
     }
     return createLLMService(provider, apiKey)
-  }, [settings.offlineMode, settings.selectedModel, settings.selectedProvider])
+  }, [settings.selectedProvider])
 
   const generate = useCallback(
     async (prompt: string) => {
@@ -65,9 +56,6 @@ export function useGeneration() {
       if (!generation.generatedJSX || !generation.prompt) return
 
       const now = new Date().toISOString()
-      const modelUsed = settings.offlineMode
-        ? `offline:${settings.selectedModel}`
-        : settings.selectedProvider
 
       const app: SavedApp = {
         id: `app_${Date.now()}`,
@@ -76,7 +64,7 @@ export function useGeneration() {
         generatedJSX: generation.generatedJSX,
         createdDate: now,
         updatedDate: now,
-        modelUsed,
+        modelUsed: settings.selectedProvider,
         status: 'success',
       }
 

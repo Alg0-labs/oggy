@@ -4,7 +4,7 @@ export interface LLMService {
   testConnection?(): Promise<boolean>
 }
 
-export type LLMProvider = 'openai' | 'google' | 'anthropic' | 'offline'
+export type LLMProvider = 'openai' | 'google' | 'anthropic'
 
 export const SYSTEM_PROMPT = `You are an expert React Native developer. Generate a single, self-contained React Native component in JSX that implements the user's request.
 

@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Switch,
   Alert,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -14,29 +13,40 @@ import { Ionicons } from '@expo/vector-icons'
 import { useAppStore } from '../../store/appStore'
 import { keychainManager } from '../../services/storage/keychain'
 import { createLLMService } from '../../services/llm/factory'
-import { ModelCard } from '../../components/ModelCard'
-import * as OggyMLX from '../../modules/oggy-mlx'
-import { Colors, Spacing, Radius } from '../../constants/theme'
+import { Colors, Spacing, Radius, Type } from '../../constants/theme'
+import { mockProfile } from '../../constants/mockProfile'
 
 type Provider = 'openai' | 'google' | 'anthropic'
 
-const providerConfig: { key: Provider; label: string; icon: string; color: string; placeholder: string }[] = [
+const providerConfig: {
+  key: Provider
+  label: string
+  icon: string
+  color: string
+  placeholder: string
+}[] = [
   { key: 'openai', label: 'OpenAI', icon: 'flash', color: Colors.providers.openai, placeholder: 'sk-...' },
   { key: 'google', label: 'Google Gemini', icon: 'sparkles', color: Colors.providers.google, placeholder: 'AIza...' },
   { key: 'anthropic', label: 'Anthropic Claude', icon: 'diamond', color: Colors.providers.anthropic, placeholder: 'sk-ant-...' },
 ]
 
-const modelConfigs = [
-  { id: OggyMLX.MODEL_IDS.E4B, settingValue: 'e4b' as const, ...OggyMLX.MODEL_INFO[OggyMLX.MODEL_IDS.E4B] },
-  { id: OggyMLX.MODEL_IDS.E8B, settingValue: 'e8b' as const, ...OggyMLX.MODEL_INFO[OggyMLX.MODEL_IDS.E8B] },
-]
+const badgeColorMap: Record<'teal' | 'blue' | 'pink' | 'brown', string> = {
+  teal: Colors.teal,
+  blue: Colors.blue,
+  pink: Colors.pink,
+  brown: Colors.brown,
+}
+
+function formatCount(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
+  return `${n}`
+}
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets()
   const settings = useAppStore((s) => s.settings)
   const setSetting = useAppStore((s) => s.setSetting)
-  const isOfflineModelDownloaded = useAppStore((s) => s.isOfflineModelDownloaded)
-  const setModelStatus = useAppStore((s) => s.setModelStatus)
+  const apps = useAppStore((s) => s.apps)
 
   const [keys, setKeys] = useState<Record<Provider, string>>({
     openai: '',
@@ -51,24 +61,9 @@ export default function SettingsScreen() {
   const [editing, setEditing] = useState<Provider | null>(null)
   const [testing, setTesting] = useState<Provider | null>(null)
 
-  // Offline model state
-  const [downloadProgress, setDownloadProgress] = useState<Record<string, number>>({})
-  const [isDownloading, setIsDownloading] = useState<Record<string, boolean>>({})
-
-  const nativeAvailable = OggyMLX.isAvailable()
-
   useEffect(() => {
     loadKeys()
-    checkModelStatus()
   }, [])
-
-  useEffect(() => {
-    if (!nativeAvailable) return
-    const sub = OggyMLX.addDownloadProgressListener(({ modelId, progress }) => {
-      setDownloadProgress((prev) => ({ ...prev, [modelId]: progress }))
-    })
-    return () => sub.remove()
-  }, [nativeAvailable])
 
   const loadKeys = async () => {
     const results: Record<Provider, boolean> = { openai: false, google: false, anthropic: false }
@@ -77,14 +72,6 @@ export default function SettingsScreen() {
       results[p.key] = !!key
     }
     setHasKey(results)
-  }
-
-  const checkModelStatus = async () => {
-    if (!nativeAvailable) return
-    for (const m of modelConfigs) {
-      const downloaded = await OggyMLX.isModelDownloaded(m.id)
-      setModelStatus(m.id, downloaded)
-    }
   }
 
   const saveKey = useCallback(async (provider: Provider) => {
@@ -110,7 +97,10 @@ export default function SettingsScreen() {
       }
       const llm = createLLMService(provider, apiKey)
       const ok = await llm.testConnection?.()
-      Alert.alert(ok ? 'Connected' : 'Failed', ok ? `${provider} is working.` : 'Could not connect. Check your key.')
+      Alert.alert(
+        ok ? 'Connected' : 'Failed',
+        ok ? `${provider} is working.` : 'Could not connect. Check your key.'
+      )
     } catch {
       Alert.alert('Error', 'Connection test failed.')
     } finally {
@@ -118,38 +108,9 @@ export default function SettingsScreen() {
     }
   }, [])
 
-  const handleDownloadModel = useCallback(async (modelId: string) => {
-    setIsDownloading((prev) => ({ ...prev, [modelId]: true }))
-    setDownloadProgress((prev) => ({ ...prev, [modelId]: 0 }))
-    try {
-      await OggyMLX.downloadModel(modelId)
-      setModelStatus(modelId, true)
-    } catch (err: any) {
-      Alert.alert('Download Failed', err.message || 'Unknown error')
-    } finally {
-      setIsDownloading((prev) => ({ ...prev, [modelId]: false }))
-    }
-  }, [setModelStatus])
-
-  const handleDeleteModel = useCallback(async (modelId: string) => {
-    Alert.alert('Delete Model', 'Remove downloaded model?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await OggyMLX.deleteModel(modelId)
-            setModelStatus(modelId, false)
-          } catch (err: any) {
-            Alert.alert('Error', err.message || 'Failed to delete')
-          }
-        },
-      },
-    ])
-  }, [setModelStatus])
-
-  const offlineDisabled = !nativeAvailable
+  const profile = mockProfile
+  const publicCount = apps.filter((a) => a.visibility === 'public').length
+  const joinedYear = new Date(profile.joinedDate).getFullYear()
 
   return (
     <ScrollView
@@ -157,122 +118,158 @@ export default function SettingsScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.title}>Settings</Text>
+      <Text style={styles.eyebrow}>Your profile</Text>
+      <Text style={styles.title}>Settings.</Text>
 
-      {/* On-Device AI */}
-      <Text style={styles.sectionLabel}>On-Device AI</Text>
-      <View style={styles.offlineCard}>
-        <View style={styles.offlineHeader}>
-          <View style={styles.offlineLeft}>
-            <Ionicons name="hardware-chip-outline" size={20} color={Colors.accent} />
-            <Text style={styles.offlineName}>Offline Mode</Text>
+      {/* Profile card (dark) */}
+      <View style={styles.profileCard}>
+        <View style={styles.profileTopRow}>
+          <View style={[styles.avatar, { backgroundColor: profile.avatarColor }]}>
+            <Text style={styles.avatarText}>{profile.avatarInitials}</Text>
           </View>
-          <Switch
-            value={settings.offlineMode}
-            onValueChange={(v) => setSetting('offlineMode', v)}
-            disabled={offlineDisabled}
-            trackColor={{ false: Colors.border, true: Colors.accent + '60' }}
-            thumbColor={settings.offlineMode ? Colors.accent : Colors.textMuted}
-          />
+          <TouchableOpacity style={styles.editProfileBtn} activeOpacity={0.85}>
+            <Text style={styles.editProfileText}>Edit profile</Text>
+          </TouchableOpacity>
         </View>
-        {offlineDisabled && (
-          <Text style={styles.offlineHint}>
-            Requires a development build. Run: npx expo run:ios
-          </Text>
-        )}
-        {!offlineDisabled && (
-          <Text style={styles.offlineHint}>
-            Run models locally on your device. No internet required.
-          </Text>
-        )}
+
+        <Text style={styles.profileName}>{profile.name}</Text>
+        <Text style={styles.profileHandle}>{profile.handle}</Text>
+        <Text style={styles.profileBio}>{profile.bio}</Text>
+
+        <View style={styles.profileMetaRow}>
+          <View style={styles.profileMeta}>
+            <Ionicons name="location-outline" size={14} color="rgba(244,244,244,0.6)" />
+            <Text style={styles.profileMetaText}>{profile.location}</Text>
+          </View>
+          <View style={styles.profileMeta}>
+            <Ionicons name="link-outline" size={14} color="rgba(244,244,244,0.6)" />
+            <Text style={styles.profileMetaText}>{profile.website}</Text>
+          </View>
+          <View style={styles.profileMeta}>
+            <Ionicons name="calendar-outline" size={14} color="rgba(244,244,244,0.6)" />
+            <Text style={styles.profileMetaText}>Joined {joinedYear}</Text>
+          </View>
+        </View>
+
+        <View style={styles.badgeRow}>
+          {profile.badges.map((b) => (
+            <View
+              key={b.id}
+              style={[styles.badge, { backgroundColor: badgeColorMap[b.color] }]}
+            >
+              <Text style={styles.badgeText}>{b.label}</Text>
+            </View>
+          ))}
+        </View>
       </View>
 
-      {!offlineDisabled && (
-        <>
-          {modelConfigs.map((m) => (
-            <ModelCard
-              key={m.id}
-              name={m.name}
-              size={m.size}
-              isDownloaded={!!isOfflineModelDownloaded[m.id]}
-              isDownloading={!!isDownloading[m.id]}
-              downloadProgress={downloadProgress[m.id] || 0}
-              isSelected={settings.selectedModel === m.settingValue}
-              onSelect={() => setSetting('selectedModel', m.settingValue)}
-              onDownload={() => handleDownloadModel(m.id)}
-              onDelete={() => handleDeleteModel(m.id)}
-            />
-          ))}
-        </>
-      )}
+      {/* Stats grid */}
+      <View style={styles.statsGrid}>
+        <View style={styles.statCell}>
+          <Text style={styles.statValue}>{apps.length || profile.stats.appsCreated}</Text>
+          <Text style={styles.statLabel}>Built</Text>
+        </View>
+        <View style={styles.statCellDivider} />
+        <View style={styles.statCell}>
+          <Text style={styles.statValue}>{publicCount || profile.stats.appsPublic}</Text>
+          <Text style={styles.statLabel}>Public</Text>
+        </View>
+        <View style={styles.statCellDivider} />
+        <View style={styles.statCell}>
+          <Text style={styles.statValue}>{formatCount(profile.stats.totalLikes)}</Text>
+          <Text style={styles.statLabel}>Likes</Text>
+        </View>
+        <View style={styles.statCellDivider} />
+        <View style={styles.statCell}>
+          <Text style={styles.statValue}>{formatCount(profile.stats.followers)}</Text>
+          <Text style={styles.statLabel}>Followers</Text>
+        </View>
+      </View>
+
+      {/* Social row */}
+      <View style={styles.socialRow}>
+        <TouchableOpacity style={styles.socialPillDark} activeOpacity={0.85}>
+          <Ionicons name="people-outline" size={16} color={Colors.textInverse} />
+          <Text style={styles.socialPillDarkText}>
+            {profile.stats.following} following
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.socialPillOutlined} activeOpacity={0.85}>
+          <Ionicons name="share-outline" size={16} color={Colors.text} />
+          <Text style={styles.socialPillOutlinedText}>Share profile</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Active Provider */}
-      <Text style={styles.sectionLabel}>Active Provider</Text>
-      <View style={[styles.providerRow, settings.offlineMode && styles.dimmed]}>
+      <Text style={styles.sectionLabel}>Active provider</Text>
+      <View style={styles.providerRow}>
         {providerConfig.map((p) => {
-          const active = settings.selectedProvider === p.key && !settings.offlineMode
+          const active = settings.selectedProvider === p.key
           return (
             <TouchableOpacity
               key={p.key}
               style={[
                 styles.providerChip,
-                active && { backgroundColor: p.color + '20', borderColor: p.color + '60' },
+                active ? styles.providerChipActive : styles.providerChipInactive,
               ]}
-              onPress={() => !settings.offlineMode && setSetting('selectedProvider', p.key)}
-              activeOpacity={settings.offlineMode ? 1 : 0.7}
+              onPress={() => setSetting('selectedProvider', p.key)}
+              activeOpacity={0.85}
             >
               <Ionicons
                 name={p.icon as any}
-                size={16}
-                color={active ? p.color : Colors.textMuted}
+                size={14}
+                color={active ? Colors.textInverse : Colors.text}
               />
-              <Text style={[styles.chipLabel, active && { color: p.color }]}>
+              <Text
+                style={[
+                  styles.chipLabel,
+                  { color: active ? Colors.textInverse : Colors.text },
+                ]}
+              >
                 {p.label.split(' ')[0]}
               </Text>
-              {active && (
-                <Ionicons name="checkmark-circle" size={14} color={p.color} />
-              )}
             </TouchableOpacity>
           )
         })}
       </View>
-      {settings.offlineMode && (
-        <Text style={styles.dimmedHint}>Disabled while offline mode is on</Text>
-      )}
 
       {/* API Keys */}
-      <View style={settings.offlineMode ? styles.dimmed : undefined}>
+      <View>
         <Text style={styles.sectionLabel}>API Keys</Text>
         {providerConfig.map((p) => (
           <View key={p.key} style={styles.keyCard}>
             <View style={styles.keyHeader}>
               <View style={styles.keyLeft}>
                 <View style={[styles.keyDot, { backgroundColor: p.color }]}>
-                  <Ionicons name={p.icon as any} size={14} color="#FFF" />
+                  <Ionicons name={p.icon as any} size={14} color={Colors.textInverse} />
                 </View>
-                <Text style={styles.keyName}>{p.label}</Text>
-              </View>
-              <View style={styles.keyRight}>
-                {hasKey[p.key] && !settings.offlineMode && (
-                  <TouchableOpacity
-                    style={styles.testBtn}
-                    onPress={() => testKey(p.key)}
-                    disabled={testing === p.key}
+                <View>
+                  <Text style={styles.keyName}>{p.label}</Text>
+                  <Text
+                    style={[
+                      styles.keyStatus,
+                      { color: hasKey[p.key] ? Colors.teal : Colors.textMuted },
+                    ]}
                   >
-                    <Text style={[styles.testText, testing === p.key && { opacity: 0.5 }]}>
-                      {testing === p.key ? 'Testing...' : 'Test'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                <View style={[styles.statusBadge, hasKey[p.key] ? styles.statusOk : styles.statusMissing]}>
-                  <Text style={[styles.statusText, hasKey[p.key] ? styles.statusTextOk : styles.statusTextMissing]}>
-                    {hasKey[p.key] ? 'Set' : 'Missing'}
+                    {hasKey[p.key] ? 'Connected' : 'No key set'}
                   </Text>
                 </View>
               </View>
+              {hasKey[p.key] && (
+                <TouchableOpacity
+                  style={styles.testPill}
+                  onPress={() => testKey(p.key)}
+                  disabled={testing === p.key}
+                  activeOpacity={0.85}
+                >
+                  <Text style={[styles.testPillText, testing === p.key && { opacity: 0.5 }]}>
+                    {testing === p.key ? 'Testing' : 'Test'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
 
-            {!settings.offlineMode && editing === p.key ? (
+            {editing === p.key ? (
               <View style={styles.inputRow}>
                 <TextInput
                   style={styles.keyInput}
@@ -285,7 +282,7 @@ export default function SettingsScreen() {
                   autoCorrect={false}
                 />
                 <TouchableOpacity style={styles.saveBtn} onPress={() => saveKey(p.key)}>
-                  <Ionicons name="checkmark" size={18} color="#FFF" />
+                  <Ionicons name="checkmark" size={18} color={Colors.textInverse} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.cancelBtn}
@@ -294,22 +291,66 @@ export default function SettingsScreen() {
                     setKeys((prev) => ({ ...prev, [p.key]: '' }))
                   }}
                 >
-                  <Ionicons name="close" size={18} color={Colors.textSecondary} />
+                  <Ionicons name="close" size={18} color={Colors.text} />
                 </TouchableOpacity>
               </View>
-            ) : !settings.offlineMode ? (
+            ) : (
               <TouchableOpacity
                 style={styles.editRow}
                 onPress={() => setEditing(p.key)}
+                activeOpacity={0.85}
               >
                 <Text style={styles.editText}>
                   {hasKey[p.key] ? 'Update key' : 'Add key'}
                 </Text>
-                <Ionicons name="chevron-forward" size={14} color={Colors.textMuted} />
+                <Ionicons name="chevron-forward" size={16} color={Colors.text} />
               </TouchableOpacity>
-            ) : null}
+            )}
           </View>
         ))}
+      </View>
+
+      {/* Preferences */}
+      <Text style={styles.sectionLabel}>Preferences</Text>
+      <View style={styles.prefList}>
+        <TouchableOpacity style={styles.prefRow} activeOpacity={0.85}>
+          <View style={styles.prefLeft}>
+            <View style={styles.prefIcon}>
+              <Ionicons name="globe-outline" size={16} color={Colors.text} />
+            </View>
+            <View>
+              <Text style={styles.prefTitle}>Default visibility</Text>
+              <Text style={styles.prefSubtitle}>New apps start as private</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+        </TouchableOpacity>
+        <View style={styles.prefDivider} />
+        <TouchableOpacity style={styles.prefRow} activeOpacity={0.85}>
+          <View style={styles.prefLeft}>
+            <View style={styles.prefIcon}>
+              <Ionicons name="notifications-outline" size={16} color={Colors.text} />
+            </View>
+            <View>
+              <Text style={styles.prefTitle}>Notifications</Text>
+              <Text style={styles.prefSubtitle}>Likes, remixes, followers</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+        </TouchableOpacity>
+        <View style={styles.prefDivider} />
+        <TouchableOpacity style={styles.prefRow} activeOpacity={0.85}>
+          <View style={styles.prefLeft}>
+            <View style={styles.prefIcon}>
+              <Ionicons name="shield-checkmark-outline" size={16} color={Colors.text} />
+            </View>
+            <View>
+              <Text style={styles.prefTitle}>Privacy & data</Text>
+              <Text style={styles.prefSubtitle}>Control what’s shared publicly</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+        </TouchableOpacity>
       </View>
 
       {/* About */}
@@ -318,8 +359,14 @@ export default function SettingsScreen() {
         <Text style={styles.aboutTitle}>Oggy</Text>
         <Text style={styles.aboutText}>
           Describe any app in natural language and watch it come to life on your phone.
+          Runs natively — no webviews, no servers.
         </Text>
-        <Text style={styles.aboutVersion}>v0.2.0</Text>
+        <View style={styles.aboutFooter}>
+          <Text style={styles.aboutVersion}>v0.2.0</Text>
+          <View style={styles.aboutBadge}>
+            <Text style={styles.aboutBadgeText}>Beta</Text>
+          </View>
+        </View>
       </View>
     </ScrollView>
   )
@@ -332,53 +379,183 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: 120,
+    paddingTop: Spacing.lg,
+    paddingBottom: 140,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: Colors.text,
-    letterSpacing: -0.5,
-    paddingTop: Spacing.md,
-    marginBottom: Spacing.xl,
-  },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
+  eyebrow: {
+    ...Type.micro,
     color: Colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 1,
     marginBottom: Spacing.sm,
-    marginTop: Spacing.lg,
   },
-  // Offline
-  offlineCard: {
-    backgroundColor: Colors.surface,
+  title: {
+    ...Type.display,
+    color: Colors.text,
+    marginBottom: Spacing.lg,
+  },
+
+  profileCard: {
+    backgroundColor: Colors.bgDark,
     borderRadius: Radius.lg,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: Spacing.sm,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
   },
-  offlineHeader: {
+  profileTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: Spacing.lg,
   },
-  offlineLeft: {
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: Radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(244,244,244,0.2)',
+  },
+  avatarText: {
+    fontSize: 26,
+    fontWeight: '500',
+    color: Colors.textInverse,
+    letterSpacing: -0.5,
+  },
+  editProfileBtn: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: Radius.pill,
+    borderWidth: 2,
+    borderColor: Colors.textInverse,
+    backgroundColor: Colors.ghostOnDark,
+  },
+  editProfileText: {
+    ...Type.button,
+    fontSize: 14,
+    color: Colors.textInverse,
+  },
+  profileName: {
+    ...Type.heading1,
+    color: Colors.textInverse,
+    marginBottom: 2,
+  },
+  profileHandle: {
+    ...Type.body,
+    color: 'rgba(244,244,244,0.6)',
+    marginBottom: Spacing.md,
+  },
+  profileBio: {
+    ...Type.body,
+    color: 'rgba(244,244,244,0.85)',
+    marginBottom: Spacing.md,
+  },
+  profileMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  profileMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: 4,
   },
-  offlineName: {
-    fontSize: 15,
-    fontWeight: '600',
+  profileMetaText: {
+    ...Type.bodySmall,
+    fontSize: 13,
+    color: 'rgba(244,244,244,0.6)',
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.xs,
+  },
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: Radius.pill,
+  },
+  badgeText: {
+    ...Type.micro,
+    color: Colors.textInverse,
+    fontSize: 10,
+    letterSpacing: 0.6,
+  },
+
+  statsGrid: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surfaceMuted,
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  statCell: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statCellDivider: {
+    width: 1,
+    backgroundColor: Colors.border,
+  },
+  statValue: {
+    ...Type.heading2,
+    color: Colors.text,
+    fontSize: 22,
+    lineHeight: 26,
+    marginBottom: 2,
+  },
+  statLabel: {
+    ...Type.micro,
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    fontSize: 10,
+  },
+
+  socialRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  socialPillDark: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.primary,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  socialPillDarkText: {
+    ...Type.button,
+    fontSize: 14,
+    color: Colors.textInverse,
+  },
+  socialPillOutlined: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: Radius.pill,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  socialPillOutlinedText: {
+    ...Type.button,
+    fontSize: 14,
     color: Colors.text,
   },
-  offlineHint: {
-    fontSize: 12,
+
+  sectionLabel: {
+    ...Type.micro,
     color: Colors.textMuted,
-    marginTop: Spacing.sm,
+    textTransform: 'uppercase',
+    marginBottom: Spacing.md,
+    marginTop: Spacing.xl,
   },
   // Providers
   providerRow: {
@@ -390,35 +567,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surfaceElevated,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: Radius.pill,
+    borderWidth: 2,
+  },
+  providerChipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  providerChipInactive: {
+    backgroundColor: 'transparent',
+    borderColor: Colors.primary,
   },
   chipLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textMuted,
-  },
-  dimmed: {
-    opacity: 0.4,
-  },
-  dimmedHint: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    marginTop: Spacing.xs,
-    fontStyle: 'italic',
+    ...Type.button,
+    fontSize: 14,
   },
   // Keys
   keyCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.surfaceMuted,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     marginBottom: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   keyHeader: {
     flexDirection: 'row',
@@ -428,124 +599,158 @@ const styles = StyleSheet.create({
   keyLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.md,
   },
   keyDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 36,
+    height: 36,
+    borderRadius: Radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
   keyName: {
-    fontSize: 15,
-    fontWeight: '600',
+    ...Type.heading3,
     color: Colors.text,
+    fontSize: 17,
   },
-  keyRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
+  keyStatus: {
+    ...Type.bodySmall,
+    fontSize: 12,
+    marginTop: 2,
   },
-  testBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+  testPill: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: Radius.pill,
+    borderWidth: 2,
+    borderColor: Colors.primary,
   },
-  testText: {
-    fontSize: 13,
-    fontWeight: '600',
+  testPillText: {
+    ...Type.button,
+    fontSize: 14,
     color: Colors.primary,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.full,
-  },
-  statusOk: {
-    backgroundColor: Colors.successBg,
-  },
-  statusMissing: {
-    backgroundColor: Colors.errorBg,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  statusTextOk: {
-    color: Colors.success,
-  },
-  statusTextMissing: {
-    color: Colors.error,
   },
   inputRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
-    marginTop: Spacing.sm,
+    marginTop: Spacing.md,
   },
   keyInput: {
     flex: 1,
-    backgroundColor: Colors.surfaceElevated,
-    borderRadius: Radius.sm,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 10,
-    fontSize: 14,
+    backgroundColor: Colors.bg,
+    borderRadius: Radius.pill,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 12,
+    ...Type.body,
     color: Colors.text,
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   saveBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.sm,
+    width: 44,
+    height: 44,
+    borderRadius: Radius.pill,
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.sm,
-    backgroundColor: Colors.surfaceElevated,
+    width: 44,
+    height: 44,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   editRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: Spacing.sm,
-    paddingTop: Spacing.sm,
+    marginTop: Spacing.md,
+    paddingTop: Spacing.md,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
   },
   editText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-  },
-  // About
-  aboutCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
-    padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  aboutTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...Type.bodySemibold,
     color: Colors.text,
-    marginBottom: Spacing.xs,
-  },
-  aboutText: {
     fontSize: 14,
-    color: Colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: Spacing.sm,
   },
-  aboutVersion: {
+
+  prefList: {
+    backgroundColor: Colors.surfaceMuted,
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+  },
+  prefRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Spacing.md,
+  },
+  prefLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  prefIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  prefTitle: {
+    ...Type.bodySemibold,
+    color: Colors.text,
+    fontSize: 15,
+  },
+  prefSubtitle: {
+    ...Type.bodySmall,
     fontSize: 12,
     color: Colors.textMuted,
+    marginTop: 2,
+  },
+  prefDivider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginHorizontal: Spacing.md,
+  },
+
+  aboutCard: {
+    backgroundColor: Colors.bgDark,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+  },
+  aboutTitle: {
+    ...Type.heading2,
+    color: Colors.textInverse,
+    marginBottom: Spacing.sm,
+  },
+  aboutText: {
+    ...Type.body,
+    color: 'rgba(244, 244, 244, 0.7)',
+    marginBottom: Spacing.md,
+  },
+  aboutFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  aboutVersion: {
+    ...Type.bodySmall,
+    color: 'rgba(244, 244, 244, 0.5)',
+  },
+  aboutBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.ghostOnDark,
+    borderWidth: 1,
+    borderColor: 'rgba(244, 244, 244, 0.3)',
+  },
+  aboutBadgeText: {
+    ...Type.micro,
+    color: Colors.textInverse,
+    fontSize: 10,
   },
 })

@@ -16,8 +16,6 @@ export interface SavedApp {
 }
 
 export interface AppSettings {
-  offlineMode: boolean
-  selectedModel: 'e4b' | 'e8b'
   selectedProvider: 'openai' | 'google' | 'anthropic'
 }
 
@@ -32,7 +30,6 @@ interface AppState {
   apps: SavedApp[]
   generation: GenerationState
   settings: AppSettings
-  isOfflineModelDownloaded: Record<string, boolean>
 
   // App actions
   saveApp: (app: SavedApp) => void
@@ -48,7 +45,6 @@ interface AppState {
 
   // Settings
   setSetting: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void
-  setModelStatus: (quantization: string, downloaded: boolean) => void
 }
 
 const initialGeneration: GenerationState = {
@@ -64,11 +60,8 @@ export const useAppStore = create<AppState>()(
       apps: [],
       generation: initialGeneration,
       settings: {
-        offlineMode: false,
-        selectedModel: 'e4b',
         selectedProvider: 'openai',
       },
-      isOfflineModelDownloaded: {},
 
       saveApp: (app: SavedApp) => {
         const { apps } = get()
@@ -125,15 +118,6 @@ export const useAppStore = create<AppState>()(
           settings: { ...state.settings, [key]: value },
         }))
       },
-
-      setModelStatus: (quantization: string, downloaded: boolean) => {
-        set((state) => ({
-          isOfflineModelDownloaded: {
-            ...state.isOfflineModelDownloaded,
-            [quantization]: downloaded,
-          },
-        }))
-      },
     }),
     {
       name: 'oggy-store',
@@ -141,7 +125,6 @@ export const useAppStore = create<AppState>()(
       partialize: (state) => ({
         apps: state.apps,
         settings: state.settings,
-        isOfflineModelDownloaded: state.isOfflineModelDownloaded,
       }),
     }
   )
