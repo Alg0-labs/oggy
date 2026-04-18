@@ -1,4 +1,4 @@
-import { LLMService, getSystemPrompt } from './index'
+import { LLMService, getSystemPrompt, getRefineSystemPrompt } from './index'
 import { extractJSXFromMarkdown } from './utils'
 
 export class OpenAILLMService implements LLMService {
@@ -12,9 +12,10 @@ export class OpenAILLMService implements LLMService {
     if (model) this.model = model
   }
 
-  async generateJSX(userPrompt: string): Promise<string> {
+  async generateJSX(userPrompt: string, signal?: AbortSignal): Promise<string> {
     const response = await fetch(`${this.baseURL}/chat/completions`, {
       method: 'POST',
+      signal,
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${this.apiKey}`,
@@ -26,7 +27,38 @@ export class OpenAILLMService implements LLMService {
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.7,
-        max_tokens: 4096,
+        max_tokens: 16384,
+      }),
+    })
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}))
+      throw new Error(`OpenAI ${response.status}: ${err.error?.message || 'Unknown error'}`)
+    }
+
+    const data = await response.json()
+    const content = data.choices?.[0]?.message?.content
+    if (!content) throw new Error('Empty response from OpenAI')
+
+    return extractJSXFromMarkdown(content)
+  }
+
+  async refineJSX(currentCode: string, refinementPrompt: string, signal?: AbortSignal): Promise<string> {
+    const response = await fetch(`${this.baseURL}/chat/completions`, {
+      method: 'POST',
+      signal,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: this.model,
+        messages: [
+          { role: 'system', content: getRefineSystemPrompt(currentCode) },
+          { role: 'user', content: refinementPrompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 16384,
       }),
     })
 

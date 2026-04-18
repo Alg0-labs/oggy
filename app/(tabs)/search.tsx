@@ -30,7 +30,8 @@ export default function SearchScreen() {
     if (!q) return [];
     return apps.filter(
       (a) =>
-        a.name.toLowerCase().includes(q) || a.prompt.toLowerCase().includes(q),
+        a.name.toLowerCase().includes(q) ||
+        a.messages.some((m) => m.role === 'user' && m.content.toLowerCase().includes(q)),
     );
   }, [apps, query]);
 
