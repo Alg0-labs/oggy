@@ -7,7 +7,7 @@ import {
   Animated,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { Colors, Radius, Spacing } from '../constants/theme'
+import { Colors, Fonts, Radius, Spacing, Type } from '../constants/theme'
 
 interface ImmersiveToolbarProps {
   visible: boolean
@@ -31,18 +31,18 @@ export function ImmersiveToolbar({
   onToggleVisibility,
 }: ImmersiveToolbarProps) {
   const opacity = useRef(new Animated.Value(0)).current
-  const translateY = useRef(new Animated.Value(-20)).current
+  const translateY = useRef(new Animated.Value(-16)).current
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(opacity, {
         toValue: visible ? 1 : 0,
-        duration: 200,
+        duration: 220,
         useNativeDriver: true,
       }),
       Animated.timing(translateY, {
-        toValue: visible ? 0 : -20,
-        duration: 200,
+        toValue: visible ? 0 : -16,
+        duration: 220,
         useNativeDriver: true,
       }),
     ]).start()
@@ -51,7 +51,7 @@ export function ImmersiveToolbar({
   return (
     <Animated.View
       style={[
-        styles.container,
+        styles.wrap,
         {
           opacity,
           transform: [{ translateY }],
@@ -59,88 +59,138 @@ export function ImmersiveToolbar({
       ]}
       pointerEvents={visible ? 'auto' : 'none'}
     >
-      <TouchableOpacity style={styles.button} onPress={onBack} activeOpacity={0.7}>
-        <Ionicons name="chevron-back" size={20} color={Colors.text} />
-      </TouchableOpacity>
+      <View style={styles.bar}>
+        {/* Back — primary dark pill */}
+        <TouchableOpacity
+          style={styles.primaryBtn}
+          onPress={onBack}
+          activeOpacity={0.85}
+          hitSlop={8}
+        >
+          <Ionicons name="chevron-back" size={18} color={Colors.textInverse} />
+        </TouchableOpacity>
 
-      {title && (
-        <Text style={styles.title} numberOfLines={1}>
-          {title}
-        </Text>
-      )}
+        {/* Title — display font, single line */}
+        {title ? (
+          <View style={styles.titleWrap}>
+            <Text style={styles.title} numberOfLines={1}>
+              {title}
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.flexSpacer} />
+        )}
 
-      <View style={styles.actions}>
-        {onToggleVisibility && (
-          <TouchableOpacity style={styles.button} onPress={onToggleVisibility} activeOpacity={0.7}>
-            <Ionicons
-              name={visibility === 'public' ? 'globe-outline' : 'lock-closed-outline'}
-              size={18}
-              color={Colors.text}
-            />
-          </TouchableOpacity>
-        )}
-        {onRefine && (
-          <TouchableOpacity
-            style={[styles.button, refineActive && styles.buttonActive]}
-            onPress={onRefine}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="chatbubble-ellipses-outline"
-              size={18}
-              color={refineActive ? Colors.textInverse : Colors.primary}
-            />
-          </TouchableOpacity>
-        )}
-        {onDelete && (
-          <TouchableOpacity style={styles.button} onPress={onDelete} activeOpacity={0.7}>
-            <Ionicons name="trash-outline" size={18} color={Colors.error} />
-          </TouchableOpacity>
-        )}
+        {/* Right actions — ghost pills */}
+        <View style={styles.actions}>
+          {onToggleVisibility && (
+            <TouchableOpacity
+              style={styles.ghostBtn}
+              onPress={onToggleVisibility}
+              activeOpacity={0.85}
+              hitSlop={6}
+            >
+              <Ionicons
+                name={visibility === 'public' ? 'globe-outline' : 'lock-closed-outline'}
+                size={16}
+                color={Colors.text}
+              />
+            </TouchableOpacity>
+          )}
+          {onRefine && (
+            <TouchableOpacity
+              style={[styles.ghostBtn, refineActive && styles.ghostBtnActive]}
+              onPress={onRefine}
+              activeOpacity={0.85}
+              hitSlop={6}
+            >
+              <Ionicons
+                name="chatbubble-ellipses-outline"
+                size={16}
+                color={refineActive ? Colors.textInverse : Colors.text}
+              />
+            </TouchableOpacity>
+          )}
+          {onDelete && (
+            <TouchableOpacity
+              style={styles.ghostBtn}
+              onPress={onDelete}
+              activeOpacity={0.85}
+              hitSlop={6}
+            >
+              <Ionicons name="trash-outline" size={16} color={Colors.danger} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </Animated.View>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
+  wrap: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 54,
+    paddingTop: 48,
     paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.sm,
-    backgroundColor: 'rgba(10, 10, 15, 0.85)',
     zIndex: 50,
   },
-  button: {
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingVertical: 6,
+    paddingLeft: 6,
+    paddingRight: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  primaryBtn: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(30, 30, 42, 0.9)',
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(42, 42, 56, 0.8)',
   },
-  buttonActive: {
+  ghostBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ghostBtnActive: {
     backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+  },
+  titleWrap: {
+    flex: 1,
+    paddingHorizontal: Spacing.xs,
   },
   title: {
-    flex: 1,
+    fontFamily: Fonts.displaySemi,
     fontSize: 15,
-    fontWeight: '600',
+    lineHeight: 18,
     color: Colors.text,
-    textAlign: 'center',
-    marginHorizontal: Spacing.sm,
+    letterSpacing: -0.2,
+  },
+  flexSpacer: {
+    flex: 1,
   },
   actions: {
     flexDirection: 'row',
-    gap: Spacing.sm,
+    alignItems: 'center',
+    gap: 6,
   },
 })

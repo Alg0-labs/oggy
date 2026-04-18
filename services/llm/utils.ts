@@ -52,20 +52,39 @@ function stripLeadingReasoningLeak(raw: string): string {
 }
 
 /**
+ * Strip stray markdown code fences from the start / end of a string.
+ * Handles ``` or ```lang on the first line, and trailing ``` on the last line,
+ * even when they appear unpaired (model emits only an opener or only a closer).
+ */
+function stripCodeFences(s: string): string {
+  let out = s
+
+  // Leading fence: optional language tag, then newline
+  out = out.replace(/^\s*```[a-zA-Z]*\s*\n?/, '')
+
+  // Trailing fence: strip any number of `` ` `` at the very end (after optional whitespace)
+  out = out.replace(/\n?```+\s*$/g, '')
+
+  return out
+}
+
+/**
  * Extract JSX code from LLM responses that may contain markdown code blocks.
  * All three providers (OpenAI, Google, Anthropic) sometimes wrap code in ```jsx blocks.
  */
 export function extractJSXFromMarkdown(content: string): string {
   const stripped = stripLeadingReasoningLeak(content)
 
-  // Try to extract from markdown code blocks (```jsx, ```javascript, ```tsx, etc.)
+  // Case 1: fully fenced block — prefer the content between the outermost fences.
+  // Non-greedy `*?` picks the first closing fence, which is what we want for a single block.
   const codeBlockRegex = /```(?:jsx|javascript|tsx|react|js)?\n?([\s\S]*?)```/
   const match = stripped.match(codeBlockRegex)
 
   if (match && match[1]) {
-    return stripLeadingReasoningLeak(match[1]).trim()
+    return stripCodeFences(stripLeadingReasoningLeak(match[1])).trim()
   }
 
-  // No markdown block found — assume the content is raw JSX
-  return stripped.trim()
+  // Case 2: no matching fence pair — strip any stray leading/trailing fences
+  // (happens when the model emits only a closer, or a fence on its own line).
+  return stripCodeFences(stripped).trim()
 }
