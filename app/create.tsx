@@ -11,9 +11,7 @@ import {
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useAppStore } from '../store/appStore'
 import { useCreateApp } from '../hooks/useGeneration'
-import { ProviderPill } from '../components/ProviderPill'
 import { PromptInput } from '../components/PromptInput'
 import { IconButton, ScreenHeader, PillButton } from '../components/ui'
 import { Colors, Spacing, Type } from '../constants/theme'
@@ -29,8 +27,6 @@ export default function CreateScreen() {
   const insets = useSafeAreaInsets()
   const inputRef = useRef<TextInput>(null)
 
-  const settings = useAppStore((s) => s.settings)
-  const setSetting = useAppStore((s) => s.setSetting)
   const createApp = useCreateApp()
 
   const [prompt, setPrompt] = useState('')
@@ -95,12 +91,6 @@ export default function CreateScreen() {
               />
             ))}
           </View>
-
-          <Text style={styles.sectionLabel}>Provider</Text>
-          <ProviderPill
-            selected={settings.selectedProvider}
-            onChange={(p) => setSetting('selectedProvider', p)}
-          />
 
           <PillButton
             label="Generate app"
