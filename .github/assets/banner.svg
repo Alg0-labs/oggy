@@ -1,0 +1,72 @@
+<svg width="1200" height="360" viewBox="0 0 1200 360" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f0d1f"/>
+      <stop offset="60%" stop-color="#1a1633"/>
+      <stop offset="100%" stop-color="#241b4d"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <linearGradient id="phone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2a2447"/>
+      <stop offset="100%" stop-color="#1c1836"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="360" rx="16" fill="url(#bg)"/>
+
+  <!-- decorative dots -->
+  <circle cx="1060" cy="60" r="140" fill="#8b5cf6" opacity="0.08"/>
+  <circle cx="120" cy="330" r="110" fill="#ec4899" opacity="0.07"/>
+
+  <!-- wordmark -->
+  <text x="80" y="150" font-size="72" font-weight="bold" fill="#ffffff">Oggy</text>
+  <rect x="82" y="172" width="120" height="6" rx="3" fill="url(#accent)"/>
+  <text x="80" y="222" font-size="26" fill="#c7c2e8">Describe an app in plain English.</text>
+  <text x="80" y="256" font-size="26" fill="#c7c2e8">Watch it run natively on your phone.</text>
+
+  <!-- tags -->
+  <g font-size="15" fill="#e9e6ff">
+    <rect x="80" y="286" width="118" height="30" rx="15" fill="#8b5cf6" opacity="0.25"/>
+    <text x="97" y="306">React Native</text>
+    <rect x="208" y="286" width="70" height="30" rx="15" fill="#8b5cf6" opacity="0.25"/>
+    <text x="228" y="306">Expo</text>
+    <rect x="288" y="286" width="110" height="30" rx="15" fill="#8b5cf6" opacity="0.25"/>
+    <text x="305" y="306">TypeScript</text>
+    <rect x="408" y="286" width="120" height="30" rx="15" fill="#ec4899" opacity="0.25"/>
+    <text x="424" y="306">LLM-powered</text>
+  </g>
+
+  <!-- prompt card -->
+  <g>
+    <rect x="620" y="70" width="300" height="88" rx="14" fill="#262047" stroke="#3b3266"/>
+    <text x="640" y="105" font-size="16" fill="#9a93c9">Prompt</text>
+    <text x="640" y="132" font-size="17" fill="#ffffff">"Build a tip calculator</text>
+    <text x="640" y="152" font-size="17" fill="#ffffff">with a percentage slider"</text>
+  </g>
+
+  <!-- arrow -->
+  <g stroke="url(#accent)" stroke-width="4" fill="none">
+    <path d="M 930 114 L 985 114"/>
+    <path d="M 975 104 L 990 114 L 975 124" fill="none"/>
+  </g>
+
+  <!-- phone -->
+  <g>
+    <rect x="1005" y="40" width="120" height="250" rx="20" fill="url(#phone)" stroke="#4c4380" stroke-width="2"/>
+    <rect x="1047" y="52" width="36" height="6" rx="3" fill="#4c4380"/>
+    <text x="1020" y="90" font-size="12" fill="#c7c2e8" font-weight="bold">Tip Calculator</text>
+    <rect x="1020" y="102" width="90" height="24" rx="6" fill="#171331"/>
+    <text x="1026" y="118" font-size="10" fill="#8f88bd">Bill: $84.00</text>
+    <rect x="1020" y="136" width="90" height="8" rx="4" fill="#171331"/>
+    <rect x="1020" y="136" width="58" height="8" rx="4" fill="url(#accent)"/>
+    <circle cx="1078" cy="140" r="7" fill="#ffffff"/>
+    <text x="1020" y="166" font-size="10" fill="#8f88bd">Tip 18%</text>
+    <rect x="1020" y="180" width="90" height="34" rx="8" fill="#8b5cf6" opacity="0.3"/>
+    <text x="1030" y="201" font-size="12" fill="#ffffff" font-weight="bold">Tip: $15.12</text>
+    <rect x="1020" y="224" width="90" height="30" rx="8" fill="url(#accent)"/>
+    <text x="1040" y="243" font-size="11" fill="#ffffff" font-weight="bold">Save app</text>
+  </g>
+</svg>

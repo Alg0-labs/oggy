@@ -12,6 +12,10 @@ class JSXTransformer {
       const result = Babel.transform(jsxCode, {
         presets: ['react'],
         filename: 'generated-app.jsx',
+        // Force script mode so Babel doesn't emit "use strict" or CJS/ESM
+        // wrappers that break `new Function`-based execution and cause
+        // "Property 'X' doesn't exist" errors in the sandbox.
+        sourceType: 'script',
       })
 
       if (!result.code) {

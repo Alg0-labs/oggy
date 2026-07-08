@@ -66,17 +66,18 @@ class JSXExecutor {
 
   execute(jsx: string): ExecutionResult {
     try {
-      // 1. Validate JSX syntax
-      const validation = jsxValidator.validate(jsx)
+      // 1. Clean the code first (strip imports/exports the LLM often emits
+      //    despite instructions — they'd otherwise trip the validator).
+      const cleanedCode = jsxValidator.cleanCode(jsx)
+
+      // 2. Validate the cleaned code
+      const validation = jsxValidator.validate(cleanedCode)
       if (!validation.valid) {
         return {
           success: false,
           error: `Validation failed: ${validation.errors.join(', ')}`,
         }
       }
-
-      // 2. Clean the code
-      const cleanedCode = jsxValidator.cleanCode(jsx)
 
       // 3. Transform JSX to JavaScript
       const transformResult = jsxTransformer.transform(cleanedCode)
