@@ -118,8 +118,8 @@ class JSXValidator {
     // Remove export default
     cleaned = cleaned.replace(/export\s+default\s+/g, '')
 
-    // Remove other exports
-    cleaned = cleaned.replace(/export\s+(?:function|const)\s+/g, '$&')
+    // Remove other exports (keep the declaration, drop the `export` keyword)
+    cleaned = cleaned.replace(/\bexport\s+(?=(?:function|const|let|var|class)\b)/g, '')
 
     return cleaned.trim()
   }

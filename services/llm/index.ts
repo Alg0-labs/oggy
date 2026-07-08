@@ -20,6 +20,7 @@ CRITICAL RULES:
 7. All data must be local state (useState)
 8. Use flexbox for layout
 9. Do NOT include any explanations or markdown - ONLY JSX code
+10. SCOPE: Place ALL constants, helper functions, and StyleSheet.create() calls INSIDE the component function body, not at module/top level. The only top-level declaration should be the component itself (e.g. \`function App() { ... }\`). This avoids temporal-dead-zone and scoping bugs in the sandboxed runtime.
 
 QUALITY EXPECTATIONS:
 - Handle empty states, loading states, and error states where they make sense
@@ -52,6 +53,7 @@ CRITICAL RULES:
 8. Make the component visually complete and functional
 9. Use flexbox for layout
 10. Do NOT include any explanations or markdown - ONLY JSX code
+11. SCOPE: Place ALL constants, helper functions, and StyleSheet.create() calls INSIDE the component function body, not at module/top level. The only top-level declaration should be the component itself. If the current code has module-level constants, MOVE them inside the component when returning the modified version.
 
 CURRENT COMPONENT CODE:
 ${currentCode}
